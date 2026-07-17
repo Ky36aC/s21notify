@@ -2,10 +2,10 @@ name: build
 
 on:
   push:
-    branches: [v3, main]
-    paths-ignore: ["**.md", "s21notify/**", "run.py", "logo.*"]
+    branches: [main]
+    paths-ignore: ["**.md", "logo.*"]
   pull_request:
-    branches: [v3, main]
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
@@ -45,9 +45,9 @@ jobs:
           mkdir -p out/static
           cp target/x86_64-unknown-linux-musl/release/s21-server out/
           cp -r miniapp/dist/* out/static/
-          cp deploy/s21notify-v3.service deploy/env.example out/
+          cp deploy/s21notify.service deploy/env.example out/
       - uses: actions/upload-artifact@v4
         with:
-          name: s21notify-v3
+          name: s21notify
           path: out/
           if-no-files-found: error

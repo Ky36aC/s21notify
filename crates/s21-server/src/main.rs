@@ -1,4 +1,4 @@
-//! s21notify v3 — точка входа.
+//! s21notify — точка входа.
 
 use s21_server::{alarm, config::AppConfig, db, http, poll, state::AppState, watcher};
 

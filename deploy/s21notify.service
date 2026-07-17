@@ -1,16 +1,16 @@
 [Unit]
-Description=s21notify v3 (Rust): уведомления Школы 21 в Telegram и MAX
+Description=s21notify (Rust): уведомления Школы 21 в Telegram и MAX
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/s21notify-v3
-ExecStart=/opt/s21notify-v3/s21-server
+WorkingDirectory=/opt/s21notify
+ExecStart=/opt/s21notify/s21-server
 Restart=always
 RestartSec=5
 Environment=TZ=Europe/Moscow
-EnvironmentFile=/opt/s21notify-v3/.env
+EnvironmentFile=/opt/s21notify/.env
 # порт 80 без root
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 # LXC всего с 512 МБ

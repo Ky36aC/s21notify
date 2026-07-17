@@ -10,7 +10,7 @@
 
 use s21_adapters::{MaxAdapter, MessengerAdapter, MsgButton, TelegramAdapter, MAX_DEFAULT_BASE};
 
-const HTML: &str = "🔔 <b>Проверка s21notify v3</b>\nЖирный, <i>курсив</i> и эмодзи 🍪\n🕐 если <b>жирный</b> виден — HTML работает";
+const HTML: &str = "🔔 <b>Проверка s21notify</b>\nЖирный, <i>курсив</i> и эмодзи 🍪\n🕐 если <b>жирный</b> виден — HTML работает";
 
 #[tokio::main]
 async fn main() {

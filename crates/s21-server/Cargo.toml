@@ -3,7 +3,7 @@ name = "s21-server"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Сервер s21notify v3: axum, SQLite, watcher/alarm-таски"
+description = "Сервер s21notify: axum, SQLite, watcher/alarm-таски"
 
 [dependencies]
 s21-core = { path = "../s21-core" }

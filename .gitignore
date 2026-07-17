@@ -1,15 +1,13 @@
+# креды платформы для examples/live_check (пароль — локально, не в git)
 config.json
-state.json
-.venv/
-venv/
-__pycache__/
-*.pyc
-*.log
 
-# v3 (Rust)
-target/
-dist/
+# секреты и БД
 .env
 *.db
 *.db-shm
 *.db-wal
+
+# сборка
+target/
+dist/
+*.log

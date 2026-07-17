@@ -126,7 +126,7 @@ pub async fn send_admin_alert(state: &AppState, text: &str) {
     adapter
         .send_message(
             chat,
-            &format!("🛑 <b>s21notify v3</b>\n{}", s21_core::esc(text)),
+            &format!("🛑 <b>s21notify</b>\n{}", s21_core::esc(text)),
             None,
         )
         .await;
