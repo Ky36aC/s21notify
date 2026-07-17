@@ -1,0 +1,15 @@
+[Unit]
+Description=s21notify — уведомления Школы 21 в Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/s21notify
+ExecStart=/opt/s21notify/.venv/bin/python run.py
+Restart=always
+RestartSec=10
+Environment=TZ=Europe/Moscow
+
+[Install]
+WantedBy=multi-user.target
