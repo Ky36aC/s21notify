@@ -132,12 +132,12 @@ class S21Api:
             self._token = None
             self._ctx_headers = None
 
-    def gql(self, op_name, query, variables=None):
+    def gql(self, op_name, query, variables=None, timeout=30):
         r = self._session.post(
             GRAPHQL_API,
             headers=self._headers(),
             json={"operationName": op_name, "query": query, "variables": variables or {}},
-            timeout=30,
+            timeout=timeout,
         )
         if r.status_code in (401, 403):
             self.invalidate()

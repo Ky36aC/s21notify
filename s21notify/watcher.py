@@ -58,6 +58,45 @@ class Journal:
             return list(self._items)[::-1]
 
 
+# дедлайны у платформы обычно в статусе SHIFTED (перенесённый), а не OPEN;
+# сервер отвечает на этот запрос долго — нужен увеличенный таймаут
+DEADLINE_STATUSES = ["OPEN", "SHIFTED", "OVERDUE"]
+
+
+def fetch_deadlines(api):
+    """Список дедлайнов: [{id, ts, title}], отсортирован по близости."""
+    data = api.gql(queries.DEADLINES_OP, queries.DEADLINES_QUERY, {
+        "deadlineStatuses": DEADLINE_STATUSES,
+        "page": {"offset": 0, "limit": 50},
+        "deadlinesFrom": None,
+        "deadlinesTo": None,
+        "sorting": None,
+    }, timeout=90)
+    out = []
+    for it in (data.get("student") or {}).get("getDeadlines") or []:
+        d = it.get("deadline") or {}
+        names = [
+            (g.get("project") or {}).get("goalName", "?")
+            for g in ((it.get("deadlineGoal") or {}).get("goalProjects") or [])
+        ]
+        title = " / ".join(n for n in names if n) \
+            or strip_html(d.get("description")) or "дедлайн"
+        out.append({
+            "id": str(d.get("deadlineId")),
+            "ts": d.get("deadlineTs", ""),
+            "title": title,
+        })
+    out.sort(key=lambda x: x["ts"])
+    return out
+
+
+def days_left(ts, now):
+    try:
+        return max(0, int((parse_ts(ts) - now).total_seconds() // 86400))
+    except Exception:
+        return None
+
+
 def booking_info(b, me):
     """Компактный словарь по брони — хранится в state для отмен/переносов."""
     task = (b.get("task") or {})
@@ -224,26 +263,13 @@ class Watcher(threading.Thread):
         )
 
     def _check_deadlines(self, now, cold, st):
-        data = self.api.gql(queries.DEADLINES_OP, queries.DEADLINES_QUERY, {
-            "deadlineStatuses": ["OPEN"],
-            "page": {"offset": 0, "limit": 50},
-            "deadlinesFrom": now.isoformat(),
-            "deadlinesTo": (now + dt.timedelta(days=DEADLINE_WINDOW_DAYS)).isoformat(),
-            "sorting": None,
-        })
-        items = (data.get("student") or {}).get("getDeadlines") or []
+        deadlines = fetch_deadlines(self.api)
         prev = st.get("deadlines", {})
         known = "deadlines" in st
         current, reminded = {}, set(st.get("reminded_deadlines", []))
 
-        for it in items:
-            d = it.get("deadline") or {}
-            did = str(d.get("deadlineId"))
-            ts = d.get("deadlineTs", "")
-            goals = ", ".join(
-                (g.get("project") or {}).get("goalName", "?")
-                for g in ((it.get("deadlineGoal") or {}).get("goalProjects") or [])
-            ) or strip_html(d.get("description")) or "дедлайн"
+        for item in deadlines:
+            did, ts, goals = item["id"], item["ts"], item["title"]
             current[did] = {"ts": ts, "title": goals}
 
             if known and did not in prev:

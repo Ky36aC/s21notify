@@ -9,7 +9,8 @@ import time
 import requests
 
 from . import queries
-from .watcher import esc, fmt_booking_line, fmt_time, strip_html, booking_info
+from .watcher import (booking_info, days_left, esc, fetch_deadlines,
+                      fmt_booking_line, fmt_time, strip_html)
 
 log = logging.getLogger("bot")
 
@@ -169,25 +170,17 @@ class Bot(threading.Thread):
 
     def _cmd_deadlines(self):
         now = dt.datetime.now(dt.timezone.utc)
-        data = self.api.gql(queries.DEADLINES_OP, queries.DEADLINES_QUERY, {
-            "deadlineStatuses": ["OPEN"],
-            "page": {"offset": 0, "limit": 50},
-            "deadlinesFrom": now.isoformat(),
-            "deadlinesTo": (now + dt.timedelta(days=60)).isoformat(),
-            "sorting": None,
-        })
-        items = (data.get("student") or {}).get("getDeadlines") or []
-        if not items:
-            return "Открытых дедлайнов нет 🙌"
+        deadlines = [d for d in fetch_deadlines(self.api)
+                     if days_left(d["ts"], now) is not None]
+        if not deadlines:
+            return "Дедлайнов нет 🙌"
         lines = []
-        for it in items:
-            d = it.get("deadline") or {}
-            goals = ", ".join(
-                (g.get("project") or {}).get("goalName", "?")
-                for g in ((it.get("deadlineGoal") or {}).get("goalProjects") or [])
-            ) or strip_html(d.get("description")) or "дедлайн"
-            lines.append(f"• {fmt_time(d.get('deadlineTs', ''))} — {esc(goals)}")
-        return "<b>Дедлайны:</b>\n" + "\n".join(lines)
+        for d in deadlines:
+            left = days_left(d["ts"], now)
+            when = f"через {left} дн" if left else "СЕГОДНЯ"
+            lines.append(f"⏳ <b>{when}</b> ({fmt_time(d['ts'])})\n"
+                         f"Сдать любой из: {esc(d['title'])}")
+        return "<b>Дедлайны:</b>\n\n" + "\n\n".join(lines)
 
     def _cmd_status(self):
         data = self.api.gql(queries.EXPERIENCE_OP, queries.EXPERIENCE_QUERY, {})
