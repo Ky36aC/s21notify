@@ -1,6 +1,6 @@
 //! s21notify v3 — точка входа.
 
-use s21_server::{config::AppConfig, db, http, poll, state::AppState};
+use s21_server::{alarm, config::AppConfig, db, http, poll, state::AppState, watcher};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -28,8 +28,10 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    // TODO(фаза 7): watcher (PollManager, poll_rx) + alarm-таска
-    drop(poll_rx);
+    let manager = watcher::PollManager::new(state.clone());
+    tokio::spawn(manager.run(poll_rx));
+    tokio::spawn(alarm::run(state.clone()));
+    tokio::spawn(watcher::housekeeping(state.clone()));
 
     tracing::info!(
         "s21notify v{} слушает {} ({} мессенджеров)",

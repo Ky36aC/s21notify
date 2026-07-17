@@ -32,3 +32,4 @@ rand = "0.8"
 wiremock = "0.6"
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }
 http-body-util = "0.1"
+async-trait = "0.1"

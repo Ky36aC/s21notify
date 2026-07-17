@@ -2062,6 +2062,7 @@ version = "3.0.0-dev"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "async-trait",
  "axum",
  "base64",
  "chrono",

@@ -71,7 +71,7 @@ impl MaxAdapter {
             reason,
             format!(
                 "HTTP {status}: {}",
-                &text.chars().take(300).collect::<String>()
+                text.chars().take(300).collect::<String>()
             ),
         )
     }

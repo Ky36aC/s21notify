@@ -29,6 +29,16 @@ impl AppState {
         pool: SqlitePool,
         poll_tx: PollSender,
     ) -> anyhow::Result<Arc<Self>> {
+        Self::build_with_adapters(cfg, pool, poll_tx, None)
+    }
+
+    /// Для тестов: подменить адаптеры моками.
+    pub fn build_with_adapters(
+        cfg: AppConfig,
+        pool: SqlitePool,
+        poll_tx: PollSender,
+        adapters_override: Option<HashMap<String, Arc<dyn MessengerAdapter>>>,
+    ) -> anyhow::Result<Arc<Self>> {
         let cipher = TokenCipher::from_base64(&cfg.encryption_key)?;
         let urls = PlatformUrls::from_env();
         let sessions = Arc::new(SessionManager::new(
@@ -38,23 +48,29 @@ impl AppState {
             pool.clone(),
         ));
 
-        let mut adapters: HashMap<String, Arc<dyn MessengerAdapter>> = HashMap::new();
-        if cfg.enabled_messengers.iter().any(|m| m == "telegram") {
-            if let Some(token) = &cfg.tg_bot_token {
-                adapters.insert(
-                    "telegram".into(),
-                    Arc::new(TelegramAdapter::new(token, &cfg.tg_webhook_secret)),
-                );
+        let adapters = match adapters_override {
+            Some(a) => a,
+            None => {
+                let mut adapters: HashMap<String, Arc<dyn MessengerAdapter>> = HashMap::new();
+                if cfg.enabled_messengers.iter().any(|m| m == "telegram") {
+                    if let Some(token) = &cfg.tg_bot_token {
+                        adapters.insert(
+                            "telegram".into(),
+                            Arc::new(TelegramAdapter::new(token, &cfg.tg_webhook_secret)),
+                        );
+                    }
+                }
+                if cfg.enabled_messengers.iter().any(|m| m == "max") {
+                    if let Some(token) = &cfg.max_bot_token {
+                        adapters.insert(
+                            "max".into(),
+                            Arc::new(MaxAdapter::new(token, &cfg.max_api_url, cfg.max_html)?),
+                        );
+                    }
+                }
+                adapters
             }
-        }
-        if cfg.enabled_messengers.iter().any(|m| m == "max") {
-            if let Some(token) = &cfg.max_bot_token {
-                adapters.insert(
-                    "max".into(),
-                    Arc::new(MaxAdapter::new(token, &cfg.max_api_url, cfg.max_html)?),
-                );
-            }
-        }
+        };
 
         Ok(Arc::new(Self {
             cfg,

@@ -428,6 +428,7 @@ pub async fn commit_cycle(
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct AlarmCandidate {
     pub user_id: i64,
+    pub s21_login: String,
     pub booking_id: String,
     pub start_ts: String,
     pub info: String,
@@ -435,9 +436,10 @@ pub struct AlarmCandidate {
 
 pub async fn alarm_candidates(pool: &SqlitePool) -> anyhow::Result<Vec<AlarmCandidate>> {
     Ok(sqlx::query_as(
-        "SELECT ab.user_id, ab.booking_id, ab.start_ts, ab.info \
+        "SELECT ab.user_id, u.s21_login, ab.booking_id, ab.start_ts, ab.info \
          FROM active_bookings ab \
          JOIN settings s ON s.user_id = ab.user_id \
+         JOIN users u ON u.id = ab.user_id \
          WHERE ab.acked = 0 AND s.notify_alarm = 1 AND s.notify_reminders = 1",
     )
     .fetch_all(pool)
