@@ -11,3 +11,5 @@ serde_json = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 thiserror = { workspace = true }
+indexmap = { version = "2", features = ["serde"] }
+regex = "1"
