@@ -14,3 +14,16 @@ tokio = { workspace = true }
 reqwest = { workspace = true }
 tracing = { workspace = true }
 async-trait = "0.1"
+teloxide-core = { version = "0.13", default-features = false, features = ["rustls"] }
+hmac = "0.12"
+sha2 = "0.10"
+subtle = "2"
+hex = "0.4"
+form_urlencoded = "1"
+percent-encoding = "2"
+anyhow = "1"
+
+[dev-dependencies]
+wiremock = "0.6"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }
+dotenvy = "0.15"
