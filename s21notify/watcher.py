@@ -369,8 +369,9 @@ class Alarm(threading.Thread):
         self.state = state
         self.journal = journal
         self.send = send_fn
+        # осторожно с именами: threading.Thread занимает _started, _handle и др.
         self._last_sent = {}   # bid -> time.monotonic() последнего сообщения
-        self._started = set()  # брони, по которым будильник уже звенел (для журнала)
+        self._alarmed = set()  # брони, по которым будильник уже звенел (для журнала)
 
     def run(self):
         while True:
@@ -401,8 +402,8 @@ class Alarm(threading.Thread):
             if time.monotonic() - self._last_sent.get(bid, 0) < ALARM_REPEAT_SEC:
                 continue
             self._last_sent[bid] = time.monotonic()
-            if bid not in self._started:
-                self._started.add(bid)
+            if bid not in self._alarmed:
+                self._alarmed.add(bid)
                 self.journal.add("🚨 будильник: подтверждение не нажато, начинаю звонить")
             self.send(
                 f"🚨🚨🚨 <b>ПРОВЕРКА ЧЕРЕЗ {int(left)} СЕК!</b>\n"
