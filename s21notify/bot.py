@@ -87,11 +87,12 @@ class Bot(threading.Thread):
             for upd in data.get("result", []):
                 self._offset = upd["update_id"] + 1
                 try:
-                    self._handle(upd.get("message") or {})
+                    # имя не _handle: threading.Thread в 3.13+ ставит одноимённый атрибут
+                    self._handle_message(upd.get("message") or {})
                 except Exception as e:
                     log.exception("ошибка обработки команды: %s", e)
 
-    def _handle(self, msg):
+    def _handle_message(self, msg):
         chat_id = str((msg.get("chat") or {}).get("id", ""))
         text = (msg.get("text") or "").strip().lower()
         if not chat_id or not text:

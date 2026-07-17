@@ -38,6 +38,8 @@ def _token_valid(token, margin=60):
 
 def kc_login(session, username, password):
     """Возвращает access_token или бросает AuthError."""
+    # без чистки кук повторный логин уходит в SSO-редирект мимо формы
+    session.cookies.clear()
     auth_url = (
         f"{KC_BASE}/auth?client_id=school21&response_mode=fragment"
         f"&response_type=code&scope=openid"
