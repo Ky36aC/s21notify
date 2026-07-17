@@ -5,3 +5,11 @@ venv/
 __pycache__/
 *.pyc
 *.log
+
+# v3 (Rust)
+target/
+dist/
+.env
+*.db
+*.db-shm
+*.db-wal

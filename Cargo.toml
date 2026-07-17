@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/s21-core",
+    "crates/s21-platform",
+    "crates/s21-adapters",
+    "crates/s21-server",
+    "miniapp",
+]
+# miniapp собирается только под wasm32 (trunk) — из обычной сборки исключён
+default-members = [
+    "crates/s21-core",
+    "crates/s21-platform",
+    "crates/s21-adapters",
+    "crates/s21-server",
+]
+
+[workspace.package]
+version = "3.0.0-dev"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "cookies"] }
+tracing = "0.1"
+
+[profile.release]
+lto = "thin"
+strip = true

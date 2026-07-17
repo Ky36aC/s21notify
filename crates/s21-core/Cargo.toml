@@ -1,0 +1,13 @@
+[package]
+name = "s21-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Чистая доменная логика s21notify: диффинг, форматирование, каскад напоминаний (без I/O)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+thiserror = { workspace = true }

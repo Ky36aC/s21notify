@@ -1,0 +1,22 @@
+# CI v3: пока только cargo check/test бэкенда; musl-сборка и trunk добавятся в фазе 9
+name: build
+
+on:
+  push:
+    branches: [v3, main]
+    paths-ignore: ["**.md", "s21notify/**", "run.py", "logo.*"]
+  pull_request:
+    branches: [v3, main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --workspace --exclude s21-miniapp --all-targets
+      - run: cargo test --workspace --exclude s21-miniapp
+      - run: cargo fmt --all --check

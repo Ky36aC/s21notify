@@ -1,0 +1,16 @@
+[package]
+name = "s21-adapters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Адаптеры мессенджеров (Telegram, MAX): единый trait, троттлинг, классификация ошибок"
+
+[dependencies]
+s21-core = { path = "../s21-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }
+async-trait = "0.1"

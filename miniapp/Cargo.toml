@@ -1,0 +1,9 @@
+[package]
+name = "s21-miniapp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Miniapp s21notify (Leptos CSR, wasm32): регистрация и настройки"
+
+# Leptos/wasm-зависимости добавятся в фазе 8 — крейт не входит в default-members
+[dependencies]

@@ -1,0 +1,16 @@
+[package]
+name = "s21-platform"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Клиент платформы Школы 21: Keycloak (offline-токены), GraphQL, REST context"
+
+[dependencies]
+s21-core = { path = "../s21-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }

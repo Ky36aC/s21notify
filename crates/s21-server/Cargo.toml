@@ -1,0 +1,19 @@
+[package]
+name = "s21-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Сервер s21notify v3: axum, SQLite, watcher/alarm-таски"
+
+[dependencies]
+s21-core = { path = "../s21-core" }
+s21-platform = { path = "../s21-platform" }
+s21-adapters = { path = "../s21-adapters" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dotenvy = "0.15"
