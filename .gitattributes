@@ -4,3 +4,8 @@
 *.py text eol=lf
 *.md text eol=lf
 *.bat text eol=crlf
+# тексты GraphQL должны совпадать с whitelist платформы байт в байт —
+# фиксируем LF, чтобы include_str! не получил CRLF после checkout на Windows
+*.graphql text eol=lf
+*.rs text eol=lf
+*.toml text eol=lf
