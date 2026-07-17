@@ -32,7 +32,9 @@ jobs:
         run: |
           rustup target add x86_64-unknown-linux-musl wasm32-unknown-unknown
           sudo apt-get update && sudo apt-get install -y musl-tools
-          cargo install trunk --locked || cargo install trunk
+          # trunk — прекомпилированный бинарь (компилировать из исходников ~5 мин)
+          curl -fsSL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xzf - -C "$HOME/.cargo/bin"
       - name: Статический бинарь сервера (musl)
         run: cargo build --release --target x86_64-unknown-linux-musl -p s21-server
       - name: Miniapp (trunk/wasm)

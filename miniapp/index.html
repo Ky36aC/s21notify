@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>s21notify</title>
-  <link data-trunk rel="rust" data-bin="s21-miniapp" />
+  <!-- Rust 1.82+ эмитит bulk-memory (memory.copy); без флага wasm-opt валится
+       на валидации ("requires bulk memory operations"). -->
+  <link data-trunk rel="rust" data-bin="s21-miniapp" data-wasm-opt-params="--enable-bulk-memory" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://st.max.ru/js/max-web-app.js"></script>
   <script>
