@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>s21notify</title>
+  <link data-trunk rel="rust" data-bin="s21-miniapp" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://st.max.ru/js/max-web-app.js"></script>
+  <script>
+    // Детект платформы: приоритет НЕПУСТОМУ initData, MAX первым —
+    // telegram-web-app.js создаёт заглушку window.Telegram.WebApp даже внутри MAX.
+    window.platformDetect = function () {
+      try {
+        var mx = window.WebApp;
+        if (mx && typeof mx.initData === "string" && mx.initData.length > 0) {
+          try { mx.ready && mx.ready(); mx.expand && mx.expand(); } catch (e) {}
+          return JSON.stringify({ messenger: "max", init_data: mx.initData });
+        }
+      } catch (e) {}
+      try {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (tg && typeof tg.initData === "string" && tg.initData.length > 0) {
+          try { tg.ready(); tg.expand(); } catch (e) {}
+          return JSON.stringify({ messenger: "telegram", init_data: tg.initData });
+        }
+      } catch (e) {}
+      // дев-режим в браузере: ?dev=<ext_id>&m=telegram (нужен DEV_FAKE_AUTH=1 на сервере)
+      var p = new URLSearchParams(location.search);
+      if (p.get("dev")) {
+        return JSON.stringify({
+          messenger: p.get("m") || "telegram",
+          init_data: "dev:" + p.get("dev"),
+        });
+      }
+      return "";
+    };
+  </script>
+  <style>
+    :root {
+      --bg: var(--tg-theme-bg-color, #0f1216);
+      --fg: var(--tg-theme-text-color, #e8eaed);
+      --hint: var(--tg-theme-hint-color, #8a9099);
+      --card: var(--tg-theme-secondary-bg-color, #1a1f26);
+      --accent: var(--tg-theme-button-color, #33a852);
+      --accent-fg: var(--tg-theme-button-text-color, #ffffff);
+      --danger: #d9534f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 16px;
+      background: var(--bg); color: var(--fg);
+      font: 16px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .card {
+      background: var(--card); border-radius: 14px;
+      padding: 16px; margin-bottom: 14px;
+    }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    h2 { font-size: 16px; margin: 0 0 10px; }
+    .hint { color: var(--hint); font-size: 13px; }
+    input[type=text], input[type=password] {
+      width: 100%; padding: 12px; margin: 6px 0 12px;
+      border: 1px solid #333a44; border-radius: 10px;
+      background: var(--bg); color: var(--fg); font-size: 16px;
+    }
+    button {
+      width: 100%; padding: 13px; border: 0; border-radius: 10px;
+      background: var(--accent); color: var(--accent-fg);
+      font-size: 16px; font-weight: 600; cursor: pointer;
+    }
+    button:disabled { opacity: .55; }
+    button.secondary { background: #2a313b; color: var(--fg); font-weight: 400; }
+    button.danger { background: transparent; color: var(--danger); font-weight: 400; }
+    .row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; }
+    .row label { flex: 1; }
+    .switch { transform: scale(1.35); accent-color: var(--accent); }
+    .error { color: var(--danger); margin: 8px 0; font-size: 14px; }
+    .ok-badge { color: #3fb950; }
+    .warn-badge { color: #e3b341; }
+    .center { text-align: center; padding: 40px 10px; color: var(--hint); }
+    .linked { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+  </style>
+</head>
+<body></body>
+</html>

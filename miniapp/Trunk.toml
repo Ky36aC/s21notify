@@ -1,0 +1,9 @@
+# Сборка: trunk build --release (в CI); дев-режим: trunk serve при запущенном
+# s21-server c DEV_FAKE_AUTH=1 (открывать http://127.0.0.1:8080/?dev=1)
+[build]
+target = "index.html"
+dist = "dist"
+
+[[proxy]]
+rewrite = "/api/"
+backend = "http://127.0.0.1:8021/api/"
