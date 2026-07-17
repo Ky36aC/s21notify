@@ -26,11 +26,12 @@ HELP_TEXT = (
 
 
 class Bot(threading.Thread):
-    def __init__(self, config, api, journal, watcher=None):
+    def __init__(self, config, api, journal, state, watcher=None):
         super().__init__(daemon=True, name="bot")
         self.config = config
         self.api = api
         self.journal = journal
+        self.state = state
         self.watcher = watcher
         self._offset = 0
 
@@ -52,15 +53,18 @@ class Bot(threading.Thread):
             log.warning("telegram %s failed: %s", method, e)
             return None
 
-    def send_to_user(self, text):
+    def send_to_user(self, text, reply_markup=None):
         chat_id = self.config.get("tg_chat_id")
         if not chat_id:
             self.journal.add("сообщение не отправлено: chat_id не привязан (напиши боту /start)", "error")
             return
-        self._api_call("sendMessage", {
+        payload = {
             "chat_id": chat_id, "text": text,
             "parse_mode": "HTML", "disable_web_page_preview": True,
-        })
+        }
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+        self._api_call("sendMessage", payload)
 
     # ------------------------------------------------------------ приём
     def run(self):
@@ -73,7 +77,7 @@ class Bot(threading.Thread):
                 r = requests.get(
                     f"https://api.telegram.org/bot{token}/getUpdates",
                     params={"offset": self._offset, "timeout": 50,
-                            "allowed_updates": '["message"]'},
+                            "allowed_updates": '["message","callback_query"]'},
                     timeout=65,
                 )
                 data = r.json()
@@ -89,7 +93,10 @@ class Bot(threading.Thread):
                 self._offset = upd["update_id"] + 1
                 try:
                     # имя не _handle: threading.Thread в 3.13+ ставит одноимённый атрибут
-                    self._handle_message(upd.get("message") or {})
+                    if "callback_query" in upd:
+                        self._handle_callback(upd["callback_query"])
+                    else:
+                        self._handle_message(upd.get("message") or {})
                 except Exception as e:
                     log.exception("ошибка обработки команды: %s", e)
 
@@ -130,6 +137,32 @@ class Bot(threading.Thread):
             self._reply(chat_id, handler())
         except Exception as e:
             self._reply(chat_id, f"⚠️ Не получилось: {esc(e)}")
+
+    def _handle_callback(self, cb):
+        """Нажатие inline-кнопки «✅ Я за компом» — гасит будильник по этой брони."""
+        message = cb.get("message") or {}
+        chat_id = str((message.get("chat") or {}).get("id", ""))
+        data = cb.get("data") or ""
+        bound = str(self.config.get("tg_chat_id") or "")
+        if chat_id != bound or not data.startswith("ack:"):
+            self._api_call("answerCallbackQuery", {"callback_query_id": cb.get("id")})
+            return
+
+        bid = data.split(":", 1)[1]
+        acked = set(self.state.data.get("acked_bookings", []))
+        if bid not in acked:
+            acked.add(bid)
+            self.state.data["acked_bookings"] = list(acked)
+            self.state.save()
+            self.journal.add("подтверждено «я за компом» — будильник не понадобится")
+        self._api_call("answerCallbackQuery", {
+            "callback_query_id": cb.get("id"), "text": "Принято! Хорошей проверки 🍪",
+        })
+        self._api_call("editMessageReplyMarkup", {
+            "chat_id": chat_id, "message_id": message.get("message_id"),
+            "reply_markup": {"inline_keyboard": [[
+                {"text": "✅ Подтверждено", "callback_data": "noop"}]]},
+        })
 
     def _reply(self, chat_id, text):
         self._api_call("sendMessage", {

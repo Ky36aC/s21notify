@@ -2,6 +2,7 @@
 """Конфигурация: config.json рядом с проектом, горячая перезагрузка по mtime."""
 
 import json
+import re
 import threading
 from pathlib import Path
 
@@ -15,15 +16,27 @@ DEFAULTS = {
     "tg_bot_token": "",
     "tg_chat_id": "",
     "poll_interval_sec": 60,
-    "remind_minutes": 30,
+    "remind_minutes": "30, 15, 3",
     "notify_bookings": True,   # новые записи на проверку
     "notify_changes": True,    # отмены и переносы
-    "notify_reminders": True,  # напоминание перед проверкой
+    "notify_reminders": True,  # напоминания перед проверкой
     "notify_feed": True,       # лента уведомлений платформы
     "notify_deadlines": True,  # дедлайны и экзамены
+    "notify_alarm": True,      # будильник, если не подтверждено «я за компом»
     "web_host": "0.0.0.0",
     "web_port": 8021,
 }
+
+
+def parse_remind_minutes(value):
+    """«30, 15, 3» (или int из старых конфигов) → отсортированный по убыванию список."""
+    if isinstance(value, (int, float)):
+        return [max(1, min(720, int(value)))]
+    minutes = set()
+    for part in re.split(r"[,;\s]+", str(value)):
+        if part.isdigit() and 1 <= int(part) <= 720:
+            minutes.add(int(part))
+    return sorted(minutes, reverse=True) or [30]
 
 
 class Config:

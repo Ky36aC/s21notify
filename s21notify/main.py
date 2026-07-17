@@ -8,7 +8,7 @@ from . import __version__
 from .bot import Bot
 from .config import Config, State
 from .s21api import S21Api
-from .watcher import Journal, Watcher
+from .watcher import Alarm, Journal, Watcher
 from .web import create_app
 
 
@@ -29,12 +29,14 @@ def main():
     journal = Journal()
     api = S21Api(config)
 
-    bot = Bot(config, api, journal)
+    bot = Bot(config, api, journal, state)
     watcher = Watcher(config, state, api, journal, send_fn=bot.send_to_user)
+    alarm = Alarm(config, state, journal, send_fn=bot.send_to_user)
     bot.watcher = watcher
 
     watcher.start()
     bot.start()
+    alarm.start()
 
     host, port = config.get("web_host"), int(config.get("web_port"))
     log.info("s21notify v%s — веб-интерфейс на http://%s:%s", __version__, host, port)

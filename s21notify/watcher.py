@@ -7,14 +7,30 @@ import html
 import logging
 import re
 import threading
+import time
 
 from . import queries
+from .config import parse_remind_minutes
 from .s21api import AuthError
 
 log = logging.getLogger("watcher")
 
 DEADLINE_WINDOW_DAYS = 30
 DEADLINE_REMIND_HOURS = 24
+
+# будильник: если «я за компом» не подтверждено, начинаем долбить
+# за ALARM_BEFORE_SEC до старта, повторяя каждые ALARM_REPEAT_SEC
+ALARM_BEFORE_SEC = 45
+ALARM_REPEAT_SEC = 10
+
+# эти типы уведомлений ленты дублируют собственные сообщения watcher'а
+# (CALENDAR — «кто-то записался на проверку», DASHBOARD — «проверка скоро начнётся»)
+SKIP_FEED_TYPES = {"CALENDAR", "DASHBOARD"}
+
+
+def ack_markup(bid):
+    """Кнопка подтверждения «я за компом» для последнего напоминания и будильника."""
+    return {"inline_keyboard": [[{"text": "✅ Я за компом", "callback_data": f"ack:{bid}"}]]}
 
 
 # ---------------------------------------------------------------- утилиты
@@ -178,8 +194,8 @@ class Watcher(threading.Thread):
 
         self.state.save()
 
-    def _notify(self, text):
-        self.send(text)
+    def _notify(self, text, reply_markup=None):
+        self.send(text, reply_markup)
         self.journal.add(strip_html(text).split("\n")[0], "sent")
 
     # ------------------------------------------------------------ проверки
@@ -198,7 +214,10 @@ class Watcher(threading.Thread):
             if not legacy_seen and not cold:
                 prev = dict(current)
 
-        reminded = set(st.get("reminded_bookings", []))
+        thresholds = parse_remind_minutes(cfg["remind_minutes"])
+        reminded = st.get("reminded_bookings", {})
+        if isinstance(reminded, list):  # v2.0 хранил просто список id
+            reminded = {bid: list(thresholds) for bid in reminded}
 
         for bid, info in current.items():
             old = prev.get(bid)
@@ -213,7 +232,7 @@ class Watcher(threading.Thread):
                         + fmt_booking_line(info, me)
                         + f"\n(было {fmt_time(old['start'])})"
                     )
-                reminded.discard(bid)
+                reminded.pop(bid, None)
 
         for bid, old in prev.items():
             if bid in current:
@@ -224,25 +243,38 @@ class Watcher(threading.Thread):
                 still_future = False
             if still_future and cfg["notify_changes"]:
                 self._notify("❌ <b>Проверка отменена</b>\n" + fmt_booking_line(old, me))
-            reminded.discard(bid)
+            reminded.pop(bid, None)
 
         if cfg["notify_reminders"]:
-            remind_delta = dt.timedelta(minutes=int(cfg["remind_minutes"]))
             for bid, info in current.items():
-                if bid in reminded:
-                    continue
                 try:
                     start = parse_ts(info["start"])
                 except Exception:
                     continue
-                if dt.timedelta(0) < start - now <= remind_delta:
-                    minutes = max(1, int((start - now).total_seconds() // 60))
-                    self._notify(f"⏰ <b>Проверка через {minutes} мин</b>\n"
-                                 + fmt_booking_line(info, me))
-                    reminded.add(bid)
+                left = start - now
+                if left <= dt.timedelta(0):
+                    continue
+                fired = reminded.setdefault(bid, [])
+                due = [t for t in thresholds
+                       if t not in fired and left <= dt.timedelta(minutes=t)]
+                if not due:
+                    continue
+                # пересекли сразу несколько порогов (например, запись за 10 мин
+                # до старта) — шлём одно сообщение, помечаем все пороги
+                minutes = max(1, int(left.total_seconds() // 60))
+                text = (f"⏰ <b>Проверка через {minutes} мин</b>\n"
+                        + fmt_booking_line(info, me))
+                markup = None
+                if min(due) == thresholds[-1] and cfg["notify_alarm"] \
+                        and bid not in st.get("acked_bookings", []):
+                    text += "\n\nНажми кнопку, иначе перед стартом включу будильник 🚨"
+                    markup = ack_markup(bid)
+                self._notify(text, markup)
+                fired.extend(due)
 
         st["bookings"] = current
-        st["reminded_bookings"] = [b for b in reminded if b in current]
+        st["reminded_bookings"] = {b: f for b, f in reminded.items() if b in current}
+        st["acked_bookings"] = [b for b in set(st.get("acked_bookings", [])) if b in current]
         st.pop("seen_bookings", None)
 
     def _check_feed(self, st):
@@ -255,6 +287,8 @@ class Watcher(threading.Thread):
         for n in notifs:
             if str(n["id"]) in seen or first_run:
                 continue
+            if n.get("relatedObjectType") in SKIP_FEED_TYPES:
+                continue  # дубль нашего же уведомления о записи/напоминания
             msg = strip_html(n.get("message"))
             self._notify(f"🏫 <b>Школа 21</b> · {esc(n.get('groupName', ''))}\n"
                          f"{esc(msg)}\n🕐 {fmt_time(n.get('time', ''))}")
@@ -319,3 +353,59 @@ class Watcher(threading.Thread):
 
         st["exams"] = current
         st["reminded_exams"] = [e for e in reminded if e in current]
+
+
+class Alarm(threading.Thread):
+    """Будильник: проверка вот-вот начнётся, а «я за компом» не нажато — долбим.
+
+    Отдельный поток, потому что цикл watcher'а ходит раз в poll_interval (60 с),
+    а тут нужна точность в секунды. В API не ходит — читает последний снапшот
+    броней из state.
+    """
+
+    def __init__(self, config, state, journal, send_fn):
+        super().__init__(daemon=True, name="alarm")
+        self.config = config
+        self.state = state
+        self.journal = journal
+        self.send = send_fn
+        self._last_sent = {}   # bid -> time.monotonic() последнего сообщения
+        self._started = set()  # брони, по которым будильник уже звенел (для журнала)
+
+    def run(self):
+        while True:
+            time.sleep(5)
+            try:
+                self._tick()
+            except Exception as e:
+                log.warning("будильник: %s", e)
+
+    def _tick(self):
+        cfg = self.config.snapshot()
+        if not (cfg["notify_alarm"] and cfg["notify_reminders"] and cfg["tg_chat_id"]):
+            return
+        now = dt.datetime.now(dt.timezone.utc)
+        me = cfg["s21_username"].split("@")[0]
+        st = self.state.data
+        acked = set(st.get("acked_bookings", []))
+
+        for bid, info in dict(st.get("bookings", {})).items():
+            if bid in acked:
+                continue
+            try:
+                left = (parse_ts(info["start"]) - now).total_seconds()
+            except Exception:
+                continue
+            if not (0 < left <= ALARM_BEFORE_SEC):
+                continue
+            if time.monotonic() - self._last_sent.get(bid, 0) < ALARM_REPEAT_SEC:
+                continue
+            self._last_sent[bid] = time.monotonic()
+            if bid not in self._started:
+                self._started.add(bid)
+                self.journal.add("🚨 будильник: подтверждение не нажато, начинаю звонить")
+            self.send(
+                f"🚨🚨🚨 <b>ПРОВЕРКА ЧЕРЕЗ {int(left)} СЕК!</b>\n"
+                + fmt_booking_line(info, me),
+                ack_markup(bid),
+            )

@@ -6,6 +6,7 @@ import logging
 import requests
 from flask import Flask, redirect, render_template_string, request
 
+from .config import parse_remind_minutes
 from .s21api import test_credentials
 
 log = logging.getLogger("web")
@@ -93,16 +94,19 @@ PAGE = """<!doctype html>
     <div class="toggles">
       <label><input type="checkbox" name="notify_bookings" {{ 'checked' if cfg.notify_bookings }}> 🔔 Новые записи на проверку</label>
       <label><input type="checkbox" name="notify_changes" {{ 'checked' if cfg.notify_changes }}> ❌ Отмены и переносы</label>
-      <label><input type="checkbox" name="notify_reminders" {{ 'checked' if cfg.notify_reminders }}> ⏰ Напоминание перед проверкой</label>
+      <label><input type="checkbox" name="notify_reminders" {{ 'checked' if cfg.notify_reminders }}> ⏰ Напоминания перед проверкой</label>
       <label><input type="checkbox" name="notify_feed" {{ 'checked' if cfg.notify_feed }}> 🏫 Лента уведомлений платформы</label>
       <label><input type="checkbox" name="notify_deadlines" {{ 'checked' if cfg.notify_deadlines }}> 📅 Дедлайны и экзамены</label>
+      <label><input type="checkbox" name="notify_alarm" {{ 'checked' if cfg.notify_alarm }}> 🚨 Будильник без «я за компом»</label>
     </div>
     <div class="row" style="margin-top:14px">
       <div><label>Интервал опроса, сек</label>
         <input type="number" name="poll_interval_sec" min="30" max="3600" value="{{ cfg.poll_interval_sec }}"></div>
-      <div><label>Напоминать за N минут до проверки</label>
-        <input type="number" name="remind_minutes" min="5" max="720" value="{{ cfg.remind_minutes }}"></div>
+      <div><label>Напоминать за N минут (через запятую)</label>
+        <input type="text" name="remind_minutes" value="{{ cfg.remind_minutes }}" placeholder="30, 15, 3"></div>
     </div>
+    <div class="hint">Последнее напоминание приходит с кнопкой «✅ Я за компом». Если её не нажать,
+      за 45 секунд до проверки бот включит будильник — сообщения каждые 10 секунд до старта.</div>
   </div>
 
   <div class="btns">
@@ -130,12 +134,14 @@ def _form_config(config, form):
     POST с неполной формой не затирает рабочие настройки."""
     updates = {
         "poll_interval_sec": max(30, int(form.get("poll_interval_sec") or 60)),
-        "remind_minutes": max(5, int(form.get("remind_minutes") or 30)),
+        "remind_minutes": ", ".join(
+            map(str, parse_remind_minutes(form.get("remind_minutes") or ""))),
         "notify_bookings": "notify_bookings" in form,
         "notify_changes": "notify_changes" in form,
         "notify_reminders": "notify_reminders" in form,
         "notify_feed": "notify_feed" in form,
         "notify_deadlines": "notify_deadlines" in form,
+        "notify_alarm": "notify_alarm" in form,
     }
     for key in ("s21_username", "s21_password", "tg_bot_token"):
         value = form.get(key, "").strip()
