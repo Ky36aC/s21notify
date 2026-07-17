@@ -1,4 +1,3 @@
-# CI v3: пока только cargo check/test бэкенда; musl-сборка и trunk добавятся в фазе 9
 name: build
 
 on:
@@ -12,7 +11,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,3 +19,33 @@ jobs:
       - run: cargo check --workspace --exclude s21-miniapp --all-targets
       - run: cargo test --workspace --exclude s21-miniapp
       - run: cargo fmt --all --check
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: musl-wasm
+      - name: Тулчейн под musl и wasm
+        run: |
+          rustup target add x86_64-unknown-linux-musl wasm32-unknown-unknown
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          cargo install trunk --locked || cargo install trunk
+      - name: Статический бинарь сервера (musl)
+        run: cargo build --release --target x86_64-unknown-linux-musl -p s21-server
+      - name: Miniapp (trunk/wasm)
+        run: trunk build --release
+        working-directory: miniapp
+      - name: Артефакт
+        run: |
+          mkdir -p out/static
+          cp target/x86_64-unknown-linux-musl/release/s21-server out/
+          cp -r miniapp/dist/* out/static/
+          cp deploy/s21notify-v3.service deploy/env.example out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s21notify-v3
+          path: out/
+          if-no-files-found: error

@@ -1,0 +1,92 @@
+# s21notify v3 (Rust)
+
+Мультипользовательский сервис уведомлений **Школы 21** в **Telegram и MAX**.
+Переписан на Rust; ветка `v3` (Python-версия v2.1 живёт в `main`, пока v3 не
+стабилизируется). Регистрация и настройки — через miniapp внутри мессенджера.
+
+Что делает — то же, что v2.1, но для любого числа студентов и в двух мессенджерах
+одновременно: 🔔 новые записи на проверку, 🔁/❌ переносы и отмены, ⏰ каскад
+напоминаний с кнопкой «✅ Я за компом» и 🚨 будильником, 📅 дедлайны и экзамены,
+🏫 лента платформы без дублей. Команды `/reviews /agenda /deadlines /status
+/check /help` работают в обоих мессенджерах.
+
+## Модель безопасности
+
+Пароли студентов **не хранятся**. При входе в miniapp пароль один раз
+отправляется на платформу, та выдаёт **offline-токен** (Keycloak,
+`scope=offline_access`), сервис шифрует его AES-256-GCM и хранит только токен;
+пароль отбрасывается. Отзыв доступа = смена пароля на платформе (сервис попросит
+войти заново). Токены ботов и ключ шифрования — в `.env` на сервере, вне git.
+
+## Архитектура (cargo workspace)
+
+| Крейт | Назначение |
+|---|---|
+| `s21-core` | Чистый диффинг и форматирование (порт `watcher.py`), без I/O. `run_cycle()` |
+| `s21-platform` | Keycloak (offline-токены), GraphQL (дословный whitelist), REST context |
+| `s21-adapters` | Trait `MessengerAdapter` + Telegram (teloxide-core) и MAX (свой клиент) |
+| `s21-server` | axum, SQLite (sqlx), watcher/alarm-таски, HTTP API, вебхуки |
+| `miniapp` | Leptos CSR (wasm) — регистрация, настройки, статус |
+
+Один процесс: HTTP-сервер (:80) + tokio-таска опроса на пользователя (джиттер,
+семафор `MAX_CONCURRENT_POLLS`, rate-limit платформы) + одна alarm-таска (тик 5 с)
++ housekeeping (чистка журнала, перестановка вебхука MAX). Состояние — SQLite
+(WAL); access-токены только в памяти, перерефрешиваются после рестарта.
+
+## Сборка
+
+Требуется тулчейн для двух целей (musl-бинарь сервера + wasm miniapp):
+
+```sh
+rustup target add x86_64-unknown-linux-musl wasm32-unknown-unknown
+cargo install trunk
+```
+
+- Тесты: `cargo test --workspace --exclude s21-miniapp`
+- Сервер (статический): `cargo build --release --target x86_64-unknown-linux-musl -p s21-server`
+- Miniapp: `cd miniapp && trunk build --release` (в `miniapp/dist/`)
+
+На Windows нужен линкер: GNU-тулчейн (`rustup override set stable-x86_64-pc-windows-gnu`)
++ `gcc` из mingw. Всё это делает **GitHub Actions** (`.github/workflows/build.yml`) —
+компилировать на LXC (512 МБ) нельзя.
+
+### Живые проверки
+
+- `cargo run -p s21-platform --example live_check` — логин/refresh/GraphQL на своём
+  аккаунте (креды берутся из `config.json` v2.1 в корне).
+- `cargo run -p s21-adapters --example send_test` — отправка себе в TG/MAX (нужны
+  `TG_BOT_TOKEN`+`TG_TEST_CHAT_ID` / `MAX_BOT_TOKEN`+`MAX_TEST_CHAT_ID`).
+
+### Локальная отладка miniapp
+
+Запусти сервер с `DEV_FAKE_AUTH=1` на :8021, затем `cd miniapp && trunk serve` и
+открой `http://127.0.0.1:8080/?dev=<любой_id>&m=telegram`. В dev-режиме
+`/api/auth` принимает `init_data="dev:<id>"` без подписи.
+
+## Деплой
+
+LXC `s21notify.lan` (Debian, 512 МБ), systemd-сервис `s21notify-v3`, каталог
+`/opt/s21notify-v3`. Компиляция — только в CI, на сервер едет готовый артефакт.
+
+```sh
+./deploy/deploy.sh              # берёт последний успешный build ветки v3
+./deploy/deploy.sh <run_id>     # конкретный запуск CI
+```
+
+Скрипт качает артефакт (`gh run download`), кладёт бинарь + `static/` + юнит на
+LXC, рестартит сервис и проверяет `/healthz`. Первый деплой попросит заполнить
+`.env` из `deploy/env.example` (сгенерировать секреты: `openssl rand -base64 32`).
+
+Проброс `https://s21notify.tobitrix.ru` → `http://10.0.0.128:80` настроен на
+роутере. Вебхуки ставятся автоматически при старте; MAX-подписку housekeeping
+переустанавливает ежечасно (MAX снимает её после ~8 ч недоступности).
+
+Старый Python-сервис (`@floriato_bot`, :8021) не трогается — боты разные,
+конфликта нет; можно гонять параллельно для сверки, потом остановить.
+
+## Настройка ботов (делается один раз руками)
+
+- **Telegram** `@s21notify_bot`: у [@BotFather](https://t.me/BotFather) задать
+  токен → `.env` `TG_BOT_TOKEN`; кнопку miniapp сервис шлёт сам (тип `web_app`).
+- **MAX** `s21notify` (кабинет dev.max.ru): токен → `.env` `MAX_BOT_TOKEN`;
+  URL miniapp прописать в кабинете.
