@@ -15,7 +15,9 @@ CREATE TABLE users (
 
 CREATE TABLE messenger_accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  -- NULL = «ожидает регистрации»: /start уже был (chat_id запомнен),
+  -- но логин в miniapp ещё не введён
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   messenger TEXT NOT NULL,                             -- 'telegram'|'max'
   ext_user_id TEXT NOT NULL,
   chat_id TEXT NOT NULL,

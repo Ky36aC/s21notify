@@ -20,12 +20,12 @@ pub trait MessengerAdapter: Send + Sync {
     /// 'telegram' | 'max' — совпадает с messenger_accounts.messenger
     fn id(&self) -> &'static str;
 
-    /// HTML-сообщение; ack_payload = приложить кнопку «✅ Я за компом».
+    /// HTML-сообщение с опциональной кнопкой.
     async fn send_message(
         &self,
         chat_id: &str,
         html: &str,
-        ack_payload: Option<&str>,
+        button: Option<MsgButton<'_>>,
     ) -> SendResult;
 
     /// Сырой webhook-JSON → нормализованный апдейт (None = игнорировать).

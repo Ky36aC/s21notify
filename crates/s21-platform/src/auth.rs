@@ -202,10 +202,12 @@ fn location_of(resp: &reqwest::Response) -> Result<&str> {
 pub(crate) fn login_action_url(page: &str) -> Option<String> {
     static RE_JS: OnceLock<regex::Regex> = OnceLock::new();
     static RE_FORM: OnceLock<regex::Regex> = OnceLock::new();
+    // http допускается ради офлайн-стенда с wiremock; боевой Keycloak всегда https
     let re_js = RE_JS.get_or_init(|| {
-        regex::Regex::new(r#"window\.loginAction\s*=\s*"(https://[^"]+)""#).unwrap()
+        regex::Regex::new(r#"window\.loginAction\s*=\s*"(https?://[^"]+)""#).unwrap()
     });
-    let re_form = RE_FORM.get_or_init(|| regex::Regex::new(r#"action="(https://[^"]+)""#).unwrap());
+    let re_form =
+        RE_FORM.get_or_init(|| regex::Regex::new(r#"action="(https?://[^"]+)""#).unwrap());
     let m = re_js
         .captures(page)
         .or_else(|| re_form.captures(page))?

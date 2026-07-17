@@ -48,7 +48,11 @@ async fn кнопка_top_level_keyboard() {
 
     adapter(&server)
         .await
-        .send_message("111", "напоминание", Some("ack:b1"))
+        .send_message(
+            "111",
+            "напоминание",
+            Some(s21_adapters::MsgButton::Ack("ack:b1")),
+        )
         .await;
 
     let req: Request = server.received_requests().await.unwrap().pop().unwrap();

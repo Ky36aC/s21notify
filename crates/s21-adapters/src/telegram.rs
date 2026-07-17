@@ -86,11 +86,19 @@ fn classify_request_error(err: &RequestError) -> SendResult {
     }
 }
 
-fn ack_markup(payload: &str) -> InlineKeyboardMarkup {
-    InlineKeyboardMarkup::new([[InlineKeyboardButton::callback(
-        s21_core::ACK_BUTTON_TEXT,
-        payload,
-    )]])
+fn button_markup(button: MsgButton<'_>) -> Option<InlineKeyboardMarkup> {
+    let btn = match button {
+        MsgButton::Ack(payload) => {
+            InlineKeyboardButton::callback(s21_core::ACK_BUTTON_TEXT, payload)
+        }
+        MsgButton::Miniapp { text, url } => InlineKeyboardButton::web_app(
+            text,
+            teloxide_core::types::WebAppInfo {
+                url: url.parse().ok()?,
+            },
+        ),
+    };
+    Some(InlineKeyboardMarkup::new([[btn]]))
 }
 
 fn confirmed_markup() -> InlineKeyboardMarkup {
@@ -117,15 +125,15 @@ impl MessengerAdapter for TelegramAdapter {
         &self,
         chat_id: &str,
         html: &str,
-        ack_payload: Option<&str>,
+        button: Option<MsgButton<'_>>,
     ) -> SendResult {
         let mut req = self
             .bot
             .send_message(Self::recipient(chat_id), html)
             .parse_mode(ParseMode::Html)
             .link_preview_options(no_preview());
-        if let Some(payload) = ack_payload {
-            req = req.reply_markup(ack_markup(payload));
+        if let Some(markup) = button.and_then(button_markup) {
+            req = req.reply_markup(markup);
         }
         match req.await {
             Ok(_) => SendResult::success(),

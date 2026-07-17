@@ -143,7 +143,8 @@ pub async fn count_users(pool: &SqlitePool) -> anyhow::Result<i64> {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct MessengerAccount {
     pub id: i64,
-    pub user_id: i64,
+    /// None = /start был, но регистрация в miniapp ещё не пройдена
+    pub user_id: Option<i64>,
     pub messenger: String,
     pub ext_user_id: String,
     pub chat_id: String,
@@ -153,26 +154,50 @@ pub struct MessengerAccount {
 
 const ACC_COLS: &str = "id, user_id, messenger, ext_user_id, chat_id, username, status";
 
-/// Привязка мессенджера к пользователю (или перепривязка к другому аккаунту).
-pub async fn link_account(
+/// /start или разблокировка: запоминаем chat_id и оживляем привязку,
+/// НЕ трогая user_id (регистрация делается отдельно через attach_user).
+pub async fn remember_chat(
     pool: &SqlitePool,
-    user_id: i64,
     messenger: &str,
     ext_user_id: &str,
     chat_id: &str,
     username: Option<&str>,
 ) -> anyhow::Result<()> {
     sqlx::query(
+        "INSERT INTO messenger_accounts (messenger, ext_user_id, chat_id, username) \
+         VALUES (?, ?, ?, ?) \
+         ON CONFLICT (messenger, ext_user_id) DO UPDATE SET \
+           chat_id = excluded.chat_id, username = excluded.username, status = 'active'",
+    )
+    .bind(messenger)
+    .bind(ext_user_id)
+    .bind(chat_id)
+    .bind(username)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Регистрация/перелогин из miniapp: привязка чата к платформенному аккаунту
+/// (или перепривязка, если мессенджер входил под другим s21-логином).
+pub async fn attach_user(
+    pool: &SqlitePool,
+    user_id: i64,
+    messenger: &str,
+    ext_user_id: &str,
+    chat_id_fallback: &str,
+    username: Option<&str>,
+) -> anyhow::Result<()> {
+    sqlx::query(
         "INSERT INTO messenger_accounts (user_id, messenger, ext_user_id, chat_id, username) \
          VALUES (?, ?, ?, ?, ?) \
          ON CONFLICT (messenger, ext_user_id) DO UPDATE SET \
-           user_id = excluded.user_id, chat_id = excluded.chat_id, \
-           username = excluded.username, status = 'active'",
+           user_id = excluded.user_id, status = 'active'",
     )
     .bind(user_id)
     .bind(messenger)
     .bind(ext_user_id)
-    .bind(chat_id)
+    .bind(chat_id_fallback)
     .bind(username)
     .execute(pool)
     .await?;
@@ -204,6 +229,17 @@ pub async fn active_accounts(
     .bind(user_id)
     .fetch_all(pool)
     .await?)
+}
+
+/// Чистка «ожидающих» привязок старше недели (нажал /start и не зарегистрировался).
+pub async fn cleanup_pending_accounts(pool: &SqlitePool) -> anyhow::Result<u64> {
+    let res = sqlx::query(
+        "DELETE FROM messenger_accounts \
+         WHERE user_id IS NULL AND linked_at < datetime('now', '-7 days')",
+    )
+    .execute(pool)
+    .await?;
+    Ok(res.rows_affected())
 }
 
 pub async fn all_accounts(

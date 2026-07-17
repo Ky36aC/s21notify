@@ -29,6 +29,15 @@ impl FailReason {
     }
 }
 
+/// Кнопка под сообщением.
+#[derive(Debug, Clone, Copy)]
+pub enum MsgButton<'a> {
+    /// «✅ Я за компом» с callback-payload ack:<bid>
+    Ack(&'a str),
+    /// Открыть miniapp (TG — web_app, MAX — link-фолбэк)
+    Miniapp { text: &'a str, url: &'a str },
+}
+
 #[derive(Debug, Clone)]
 pub struct SendResult {
     pub ok: bool,

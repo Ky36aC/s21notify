@@ -21,3 +21,14 @@ sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runti
 aes-gcm = "0.10"
 base64 = "0.22"
 anyhow = "1"
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs"] }
+jsonwebtoken = "9"
+dashmap = "6"
+rand = "0.8"
+
+[dev-dependencies]
+wiremock = "0.6"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }
+http-body-util = "0.1"

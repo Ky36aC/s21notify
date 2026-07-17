@@ -87,21 +87,30 @@ impl MessengerAdapter for MaxAdapter {
         &self,
         chat_id: &str,
         html: &str,
-        ack_payload: Option<&str>,
+        button: Option<MsgButton<'_>>,
     ) -> SendResult {
         let mut body = if self.html_format {
             json!({"text": html, "format": "html"})
         } else {
             json!({"text": s21_core::strip_html(html)})
         };
-        if let Some(payload) = ack_payload {
-            body["keyboard"] = json!({
-                "buttons": [[{
-                    "type": "callback",
-                    "text": s21_core::ACK_BUTTON_TEXT,
-                    "payload": payload,
-                }]]
-            });
+        match button {
+            Some(MsgButton::Ack(payload)) => {
+                body["keyboard"] = json!({
+                    "buttons": [[{
+                        "type": "callback",
+                        "text": s21_core::ACK_BUTTON_TEXT,
+                        "payload": payload,
+                    }]]
+                });
+            }
+            // тип кнопки MWA в кабинете уточняется — фолбэк обычной ссылкой
+            Some(MsgButton::Miniapp { text, url }) => {
+                body["keyboard"] = json!({
+                    "buttons": [[{"type": "link", "text": text, "url": url}]]
+                });
+            }
+            None => {}
         }
         let resp = self
             .http
