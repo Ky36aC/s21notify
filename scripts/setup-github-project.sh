@@ -18,6 +18,12 @@ echo "==> Создаю проект «$TITLE»"
 NUM=$(gh project create --owner "$OWNER" --title "$TITLE" --format json --jq '.number')
 echo "    проект #$NUM"
 
+# по умолчанию проект приватный и не виден в репо — делаем публичным и линкуем,
+# иначе «пропадает»: дорожная карта должна быть видна в репозитории и другим
+echo "==> Публичный + привязка к репозиторию"
+gh project edit "$NUM" --owner "$OWNER" --visibility PUBLIC
+gh project link "$NUM" --owner "$OWNER" --repo "$REPO"
+
 echo "==> Добавляю открытые issue репозитория"
 gh issue list --repo "$REPO" --state open --json url --jq '.[].url' | while read -r URL; do
     gh project item-add "$NUM" --owner "$OWNER" --url "$URL"
