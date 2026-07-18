@@ -27,6 +27,8 @@ tower-http = { version = "0.6", features = ["fs"] }
 jsonwebtoken = "9"
 dashmap = "6"
 rand = "0.8"
+# miniapp встраивается в бинарь (самодостаточный .exe); mime-guess даёт Content-Type
+rust-embed = { version = "8", features = ["mime-guess"] }
 
 [dev-dependencies]
 wiremock = "0.6"
