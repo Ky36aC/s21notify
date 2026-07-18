@@ -2725,7 +2725,7 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
 name = "s21-adapters"
-version = "3.0.0-dev"
+version = "3.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2749,7 +2749,7 @@ dependencies = [
 
 [[package]]
 name = "s21-core"
-version = "3.0.0-dev"
+version = "3.0.0"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -2762,7 +2762,7 @@ dependencies = [
 
 [[package]]
 name = "s21-miniapp"
-version = "3.0.0-dev"
+version = "3.0.0"
 dependencies = [
  "console_error_panic_hook",
  "gloo-net",
@@ -2775,7 +2775,7 @@ dependencies = [
 
 [[package]]
 name = "s21-platform"
-version = "3.0.0-dev"
+version = "3.0.0"
 dependencies = [
  "base64",
  "chrono",
@@ -2792,7 +2792,7 @@ dependencies = [
 
 [[package]]
 name = "s21-server"
-version = "3.0.0-dev"
+version = "3.0.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
