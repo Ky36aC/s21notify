@@ -20,7 +20,8 @@ jobs:
       - run: cargo test --workspace --exclude s21-miniapp
       - run: cargo fmt --all --check
 
-  build:
+  # Linux: статический musl-бинарь для сервера + артефакт со static/ рядом.
+  build-linux:
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -35,11 +36,12 @@ jobs:
           # trunk — прекомпилированный бинарь (компилировать из исходников ~5 мин)
           curl -fsSL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz \
             | tar -xzf - -C "$HOME/.cargo/bin"
-      - name: Статический бинарь сервера (musl)
-        run: cargo build --release --target x86_64-unknown-linux-musl -p s21-server
+      # miniapp собираем ДО сервера: rust-embed встроит dist в бинарь
       - name: Miniapp (trunk/wasm)
         run: trunk build --release
         working-directory: miniapp
+      - name: Статический бинарь сервера (musl)
+        run: cargo build --release --target x86_64-unknown-linux-musl -p s21-server
       - name: Артефакт
         run: |
           mkdir -p out/static
@@ -49,5 +51,43 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: s21notify
+          path: out/
+          if-no-files-found: error
+
+  # Windows: самодостаточный .exe (miniapp встроена, статический CRT — без внешних
+  # DLL) для запуска на ПК ученика двойным кликом.
+  build-windows:
+    needs: test
+    runs-on: windows-latest
+    env:
+      # статически линкуем CRT — .exe не требует vcruntime-редистрибутива
+      RUSTFLAGS: "-C target-feature=+crt-static"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: windows
+      - name: wasm-таргет и trunk
+        shell: pwsh
+        run: |
+          rustup target add wasm32-unknown-unknown
+          Invoke-WebRequest -Uri "https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-pc-windows-msvc.zip" -OutFile trunk.zip
+          Expand-Archive -Path trunk.zip -DestinationPath "$env:USERPROFILE\.cargo\bin" -Force
+      # miniapp собираем ДО сервера: rust-embed встроит dist в .exe
+      - name: Miniapp (trunk/wasm)
+        shell: pwsh
+        working-directory: miniapp
+        run: trunk build --release
+      - name: Самодостаточный .exe
+        run: cargo build --release -p s21-server
+      - name: Артефакт
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          Copy-Item target\release\s21-server.exe out\s21notify.exe
+          Copy-Item deploy\env.example out\
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s21notify-windows
           path: out/
           if-no-files-found: error
