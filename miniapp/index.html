@@ -35,6 +35,11 @@
           init_data: "dev:" + p.get("dev"),
         });
       }
+      // локальный режим: открыто в обычном браузере на localhost — сервер
+      // (APP_MODE=local) доверяет localhost и сам находит нужную привязку
+      if (location.hostname === "127.0.0.1" || location.hostname === "localhost") {
+        return JSON.stringify({ messenger: "telegram", init_data: "local" });
+      }
       return "";
     };
   </script>

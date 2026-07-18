@@ -36,6 +36,30 @@ pub struct AuthReq {
 }
 
 pub async fn auth(State(state): State<Arc<AppState>>, Json(req): Json<AuthReq>) -> ApiResult {
+    // локальный режим: доверяем localhost, личность = единственная привязка
+    // локального бота (тот, кто нажал /start). initData не проверяем.
+    if state.cfg.app_mode == crate::config::AppMode::Local {
+        let messenger = state.cfg.local_messenger();
+        let acc = db::latest_account(&state.pool, &messenger)
+            .await
+            .map_err(internal)?
+            .ok_or_else(|| {
+                err(
+                    StatusCode::CONFLICT,
+                    "Сначала нажми /start в своём боте, потом обнови страницу",
+                )
+            })?;
+        let token = jwt::issue(
+            &state.cfg.jwt_secret,
+            &messenger,
+            &acc.ext_user_id,
+            acc.user_id,
+        );
+        return Ok(Json(
+            json!({"token": token, "registered": acc.user_id.is_some()}),
+        ));
+    }
+
     // DEV-режим: "dev:<ext_id>" без подписи (только при DEV_FAKE_AUTH=1)
     let ext_user_id = if state.cfg.dev_fake_auth && req.init_data.starts_with("dev:") {
         req.init_data.trim_start_matches("dev:").to_string()

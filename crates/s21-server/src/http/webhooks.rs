@@ -93,16 +93,7 @@ pub async fn handle_update(
                 None => texts::welcome_new(),
             };
             state.throttle.acquire(messenger, &upd.chat_id).await;
-            adapter
-                .send_message(
-                    &upd.chat_id,
-                    &html,
-                    Some(MsgButton::Miniapp {
-                        text: texts::MINIAPP_BUTTON,
-                        url: &state.miniapp_url(),
-                    }),
-                )
-                .await;
+            send_with_miniapp(state, adapter.as_ref(), &upd.chat_id, &html).await;
         }
 
         UpdateKind::StoppedOrBlocked => {
@@ -141,16 +132,13 @@ pub async fn handle_update(
                 }
                 None => {
                     state.throttle.acquire(messenger, &upd.chat_id).await;
-                    adapter
-                        .send_message(
-                            &upd.chat_id,
-                            &texts::not_registered(),
-                            Some(MsgButton::Miniapp {
-                                text: texts::MINIAPP_BUTTON,
-                                url: &state.miniapp_url(),
-                            }),
-                        )
-                        .await;
+                    send_with_miniapp(
+                        state,
+                        adapter.as_ref(),
+                        &upd.chat_id,
+                        &texts::not_registered(),
+                    )
+                    .await;
                 }
             }
         }
@@ -158,4 +146,30 @@ pub async fn handle_update(
         UpdateKind::Activity => {}
     }
     Ok(())
+}
+
+/// Приглашение в miniapp. В server-режиме — кнопка web_app; в local-режиме
+/// Telegram не примет кнопку на http://localhost, поэтому URL кладём в текст.
+async fn send_with_miniapp(
+    state: &AppState,
+    adapter: &dyn s21_adapters::MessengerAdapter,
+    chat_id: &str,
+    html: &str,
+) {
+    let url = state.miniapp_url();
+    if state.cfg.app_mode == crate::config::AppMode::Local {
+        let msg = format!("{html}\n\nОткрой настройки в браузере: {url}");
+        adapter.send_message(chat_id, &msg, None).await;
+    } else {
+        adapter
+            .send_message(
+                chat_id,
+                html,
+                Some(MsgButton::Miniapp {
+                    text: texts::MINIAPP_BUTTON,
+                    url: &url,
+                }),
+            )
+            .await;
+    }
 }

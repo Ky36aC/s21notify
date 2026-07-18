@@ -85,7 +85,8 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path out | Out-Null
           Copy-Item target\release\s21-server.exe out\s21notify.exe
-          Copy-Item deploy\env.example out\
+          # готовый .env локального режима — ученику остаётся вписать токен бота
+          Copy-Item deploy\local.env.example out\.env
       - uses: actions/upload-artifact@v4
         with:
           name: s21notify-windows

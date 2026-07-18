@@ -1,11 +1,23 @@
 //! s21notify — точка входа.
 
 use s21_server::config::{AppConfig, Transport};
-use s21_server::{alarm, db, http, poll, polling, state::AppState, watcher};
+use s21_server::{alarm, db, http, local, poll, polling, state::AppState, watcher};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _ = dotenvy::dotenv();
+    // .env рядом с бинарём (для .exe у ученика — cwd может отличаться)
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let _ = dotenvy::from_path(dir.join(".env"));
+        }
+    }
+    // локальный режим: сгенерировать секреты и дефолты; без токена — выйти с подсказкой
+    if std::env::var("APP_MODE").is_ok_and(|m| m.eq_ignore_ascii_case("local"))
+        && !local::prepare()?
+    {
+        return Ok(());
+    }
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -47,6 +59,14 @@ async fn main() -> anyhow::Result<()> {
         bind_addr,
         state.adapters.len()
     );
+    if state.cfg.app_mode == s21_server::config::AppMode::Local {
+        eprintln!(
+            "\n[s21notify] Локальный режим запущен.\n\
+             1) Открой своего бота в Telegram и нажми /start.\n\
+             2) Открой в браузере: {}\n",
+            state.cfg.public_url
+        );
+    }
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
     axum::serve(listener, http::router(state)).await?;
     Ok(())

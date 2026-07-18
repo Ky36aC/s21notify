@@ -218,6 +218,20 @@ pub async fn account_by_ext(
     .await?)
 }
 
+/// Последняя привязка мессенджера — для локального режима (single-user):
+/// личность = тот, кто нажал /start в личном боте.
+pub async fn latest_account(
+    pool: &SqlitePool,
+    messenger: &str,
+) -> anyhow::Result<Option<MessengerAccount>> {
+    Ok(sqlx::query_as(&format!(
+        "SELECT {ACC_COLS} FROM messenger_accounts WHERE messenger = ? ORDER BY id DESC LIMIT 1"
+    ))
+    .bind(messenger)
+    .fetch_optional(pool)
+    .await?)
+}
+
 /// Активные привязки пользователя — сюда идут уведомления.
 pub async fn active_accounts(
     pool: &SqlitePool,

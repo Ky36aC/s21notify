@@ -30,8 +30,28 @@ impl Transport {
     }
 }
 
+/// Режим запуска. `server` — мультипользовательский сервис (по умолчанию).
+/// `local` — single-user на ПК ученика: localhost:8080, доверяем localhost,
+/// секреты генерируются сами (см. модуль `local`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppMode {
+    Server,
+    Local,
+}
+
+impl AppMode {
+    fn parse(s: &str) -> Self {
+        if s.eq_ignore_ascii_case("local") {
+            Self::Local
+        } else {
+            Self::Server
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AppConfig {
+    pub app_mode: AppMode,
     pub bind_addr: String,
     pub public_url: String,
     pub static_dir: String,
@@ -59,6 +79,7 @@ pub struct AppConfig {
 impl AppConfig {
     pub fn from_env() -> anyhow::Result<Self> {
         let cfg = Self {
+            app_mode: AppMode::parse(&var_or("APP_MODE", "server")),
             bind_addr: var_or("BIND_ADDR", "0.0.0.0:80"),
             public_url: var("PUBLIC_URL")
                 .ok_or_else(|| {
@@ -94,6 +115,14 @@ impl AppConfig {
             dev_fake_auth: var_or("DEV_FAKE_AUTH", "0") == "1",
         };
         Ok(cfg)
+    }
+
+    /// Мессенджер локального режима — первый включённый (обычно telegram).
+    pub fn local_messenger(&self) -> String {
+        self.enabled_messengers
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "telegram".to_string())
     }
 
     pub fn transport(&self, messenger: &str) -> Transport {

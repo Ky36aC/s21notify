@@ -7,6 +7,7 @@ pub mod config;
 pub mod crypto;
 pub mod db;
 pub mod http;
+pub mod local;
 pub mod poll;
 pub mod polling;
 pub mod sender;

@@ -17,6 +17,7 @@ use s21_server::{config::AppConfig, db, http, poll, state::AppState};
 fn test_config() -> AppConfig {
     // env не трогаем — собираем конфиг руками
     AppConfig {
+        app_mode: s21_server::config::AppMode::Server,
         bind_addr: "127.0.0.1:0".into(),
         public_url: "https://example.com".into(),
         static_dir: "does-not-exist".into(),
@@ -107,6 +108,47 @@ async fn вебхук_без_секрета_403() {
 }
 
 // ------------------------------------------------------------------ /api/auth
+
+#[tokio::test]
+async fn auth_локальный_режим_по_привязке() {
+    let mut cfg = test_config();
+    cfg.app_mode = s21_server::config::AppMode::Local;
+    let pool = db::connect("sqlite::memory:").await.unwrap();
+    let (tx, _rx) = poll::channel();
+    let state = AppState::build(cfg, pool, tx).unwrap();
+    let router = http::router(state.clone());
+
+    // до /start привязки нет → 409 с подсказкой нажать /start
+    let (status, _) = call(
+        &router,
+        post_json(
+            "/api/auth",
+            json!({"messenger":"telegram","init_data":"local"}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+
+    // /start в личном боте: запомнили chat_id
+    db::remember_chat(&state.pool, "telegram", "999", "999", Some("student"))
+        .await
+        .unwrap();
+
+    // теперь auth отдаёт токен, registered=false (логин Ш21 ещё не введён)
+    let (status, body) = call(
+        &router,
+        post_json(
+            "/api/auth",
+            json!({"messenger":"telegram","init_data":"local"}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["registered"], false);
+    assert!(body["token"].is_string());
+}
 
 #[tokio::test]
 async fn auth_dev_режим_и_битый_init_data() {

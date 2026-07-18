@@ -168,6 +168,7 @@ async fn build_stand(platform: &Platform) -> Stand {
     );
 
     let cfg = AppConfig {
+        app_mode: s21_server::config::AppMode::Server,
         bind_addr: "127.0.0.1:0".into(),
         public_url: "https://example.test".into(),
         static_dir: "x".into(),
