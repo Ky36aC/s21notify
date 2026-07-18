@@ -39,4 +39,16 @@ pub trait MessengerAdapter: Send + Sync {
 
     /// Регистрация вебхука (URL уже содержит секрет, если он в query).
     async fn set_webhook(&self, url: &str) -> anyhow::Result<()>;
+
+    /// Long polling: забрать пачку апдейтов начиная с `cursor` (offset/marker),
+    /// ждать до `timeout_s` секунд. По умолчанию не поддерживается.
+    async fn poll(&self, _cursor: Option<String>, _timeout_s: u64) -> anyhow::Result<PollBatch> {
+        anyhow::bail!("long polling не поддерживается адаптером {}", self.id())
+    }
+
+    /// Снять вебхук/подписку — обязательно перед long polling (Telegram не отдаёт
+    /// getUpdates при активном вебхуке). По умолчанию no-op.
+    async fn delete_webhook(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 }

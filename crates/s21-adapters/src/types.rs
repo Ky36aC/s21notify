@@ -113,6 +113,15 @@ impl IncomingUpdate {
     }
 }
 
+/// Пачка апдейтов, полученная long polling'ом.
+#[derive(Debug, Clone, Default)]
+pub struct PollBatch {
+    pub updates: Vec<IncomingUpdate>,
+    /// Курсор для следующего запроса (offset у Telegram, marker у MAX).
+    /// None — оставить прежний (пустая пачка / нет прогресса).
+    pub next_cursor: Option<String>,
+}
+
 /// Проверенный пользователь miniapp (из initData / launch-params).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MiniappUser {

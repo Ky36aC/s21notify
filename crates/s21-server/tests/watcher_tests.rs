@@ -177,8 +177,10 @@ async fn build_stand(platform: &Platform) -> Stand {
         enabled_messengers: vec!["telegram".into()],
         tg_bot_token: None,
         tg_webhook_secret: "x".into(),
+        tg_transport: s21_server::config::Transport::Polling,
         max_bot_token: None,
         max_webhook_secret: "x".into(),
+        max_transport: s21_server::config::Transport::Polling,
         max_api_url: "https://platform-api2.max.ru".into(),
         max_html: true,
         poll_interval_sec: 600, // циклы дёргаем вручную через CheckNow
@@ -196,9 +198,7 @@ async fn build_stand(platform: &Platform) -> Stand {
     let state = AppState::build_with_adapters(cfg, pool, tx.clone(), Some(adapters)).unwrap();
 
     let enc = state.cipher.encrypt("offline-token");
-    let uid = db::create_user(&state.pool, "ivan", &enc)
-        .await
-        .unwrap();
+    let uid = db::create_user(&state.pool, "ivan", &enc).await.unwrap();
     db::attach_user(&state.pool, uid, "telegram", "111", "111", None)
         .await
         .unwrap();

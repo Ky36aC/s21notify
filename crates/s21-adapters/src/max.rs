@@ -185,6 +185,77 @@ impl MessengerAdapter for MaxAdapter {
         }
         Ok(())
     }
+
+    /// GET /updates?marker&timeout&limit — long polling. Событие в массиве
+    /// updates имеет тот же вид, что и вебхук, поэтому разбираем тем же parse.
+    async fn poll(&self, cursor: Option<String>, timeout_s: u64) -> anyhow::Result<PollBatch> {
+        let timeout_str = timeout_s.to_string();
+        let mut req = self
+            .http
+            .get(format!("{}/updates", self.base))
+            .header("Authorization", &self.token)
+            .query(&[("timeout", timeout_str.as_str()), ("limit", "100")])
+            // клиент собран с общим timeout 15 с — для long polling переопределяем
+            .timeout(std::time::Duration::from_secs(timeout_s + 10));
+        if let Some(m) = cursor.as_deref() {
+            req = req.query(&[("marker", m)]);
+        }
+        let resp = req.send().await?;
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            anyhow::bail!(
+                "MAX /updates HTTP {status}: {}",
+                text.chars().take(200).collect::<String>()
+            );
+        }
+        let body: Value = resp.json().await?;
+        let mut batch = PollBatch::default();
+        if let Some(arr) = body.get("updates").and_then(Value::as_array) {
+            for raw in arr {
+                if let Some(parsed) = parse_max_update(raw) {
+                    if !parsed.ext_user_id.is_empty() {
+                        batch.updates.push(parsed);
+                    }
+                }
+            }
+        }
+        let next = match body.get("marker") {
+            Some(Value::Number(n)) => Some(n.to_string()),
+            Some(Value::String(s)) => Some(s.clone()),
+            _ => None,
+        };
+        batch.next_cursor = next.or(cursor);
+        Ok(batch)
+    }
+
+    /// Снять все подписки-вебхуки, чтобы события шли в long polling, а не на
+    /// старый вебхук-URL (best-effort).
+    async fn delete_webhook(&self) -> anyhow::Result<()> {
+        let resp = self
+            .http
+            .get(format!("{}/subscriptions", self.base))
+            .header("Authorization", &self.token)
+            .send()
+            .await?;
+        if resp.status().is_success() {
+            let body: Value = resp.json().await.unwrap_or(Value::Null);
+            if let Some(subs) = body.get("subscriptions").and_then(Value::as_array) {
+                for s in subs {
+                    if let Some(url) = s.get("url").and_then(Value::as_str) {
+                        let _ = self
+                            .http
+                            .delete(format!("{}/subscriptions", self.base))
+                            .header("Authorization", &self.token)
+                            .query(&[("url", url)])
+                            .send()
+                            .await;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 fn now_ts() -> i64 {

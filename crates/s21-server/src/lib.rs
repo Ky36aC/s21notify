@@ -8,6 +8,7 @@ pub mod crypto;
 pub mod db;
 pub mod http;
 pub mod poll;
+pub mod polling;
 pub mod sender;
 pub mod sessions;
 pub mod state;

@@ -113,6 +113,37 @@ async fn классификация_429_и_блокировки() {
 }
 
 #[tokio::test]
+async fn poll_updates_разбирает_события_и_маркер() {
+    let server = MockServer::start().await;
+    let body = serde_json::json!({
+        "updates": [
+            {"update_type":"bot_started","chat_id":111,"user_id":456},
+            {"update_type":"message_created","message":{
+                "sender":{"user_id":456,"username":"ivan"},
+                "recipient":{"chat_id":111},
+                "body":{"mid":"m1","text":"/reviews"}}}
+        ],
+        "marker": 777
+    });
+    Mock::given(method("GET"))
+        .and(path("/updates"))
+        .and(header("Authorization", "max-token-123"))
+        .and(query_param("timeout", "1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(body))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let batch = adapter(&server).await.poll(None, 1).await.unwrap();
+    assert_eq!(batch.updates.len(), 2);
+    assert_eq!(batch.updates[0].kind, s21_adapters::UpdateKind::Started);
+    assert_eq!(batch.updates[0].chat_id, "111");
+    assert_eq!(batch.updates[1].kind, s21_adapters::UpdateKind::Text);
+    // marker для следующего запроса
+    assert_eq!(batch.next_cursor.as_deref(), Some("777"));
+}
+
+#[tokio::test]
 async fn вебхук_и_ответ_на_callback() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
@@ -149,10 +180,7 @@ async fn вебхук_и_ответ_на_callback() {
         .find(|r| r.url.path() == "/subscriptions")
         .unwrap();
     let body: Value = serde_json::from_slice(&sub.body).unwrap();
-    assert_eq!(
-        body["url"],
-        "https://example.com/webhook/max?s=secret"
-    );
+    assert_eq!(body["url"], "https://example.com/webhook/max?s=secret");
     let ans = reqs.iter().find(|r| r.url.path() == "/answers").unwrap();
     let body: Value = serde_json::from_slice(&ans.body).unwrap();
     assert_eq!(body["notification"], "Принято! Хорошей проверки 🍪");

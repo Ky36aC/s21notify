@@ -185,6 +185,42 @@ impl MessengerAdapter for TelegramAdapter {
             .await?;
         Ok(())
     }
+
+    /// getUpdates: типизированный Update сериализуем обратно в webhook-JSON и
+    /// прогоняем через общий parse_telegram_update (одна логика разбора).
+    async fn poll(&self, cursor: Option<String>, timeout_s: u64) -> anyhow::Result<PollBatch> {
+        let mut req = self
+            .bot
+            .get_updates()
+            .timeout(timeout_s as u32)
+            .allowed_updates(vec![
+                AllowedUpdate::Message,
+                AllowedUpdate::CallbackQuery,
+                AllowedUpdate::MyChatMember,
+            ]);
+        if let Some(offset) = cursor.as_deref().and_then(|s| s.parse::<i32>().ok()) {
+            req = req.offset(offset);
+        }
+        let updates = req.await?;
+        let mut batch = PollBatch::default();
+        let mut next_offset: Option<i64> = None;
+        for u in &updates {
+            next_offset = Some(u.id.0 as i64 + 1);
+            let raw = serde_json::to_value(u)?;
+            if let Some(parsed) = parse_telegram_update(&raw) {
+                if !parsed.ext_user_id.is_empty() {
+                    batch.updates.push(parsed);
+                }
+            }
+        }
+        batch.next_cursor = next_offset.map(|o| o.to_string()).or(cursor);
+        Ok(batch)
+    }
+
+    async fn delete_webhook(&self) -> anyhow::Result<()> {
+        self.bot.delete_webhook().await?;
+        Ok(())
+    }
 }
 
 fn chrono_now() -> i64 {

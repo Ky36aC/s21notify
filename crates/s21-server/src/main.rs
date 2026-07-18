@@ -1,6 +1,7 @@
 //! s21notify — точка входа.
 
-use s21_server::{alarm, config::AppConfig, db, http, poll, state::AppState, watcher};
+use s21_server::config::{AppConfig, Transport};
+use s21_server::{alarm, db, http, poll, polling, state::AppState, watcher};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -18,13 +19,20 @@ async fn main() -> anyhow::Result<()> {
     let bind_addr = cfg.bind_addr.clone();
     let state = AppState::build(cfg, pool, poll_tx)?;
 
-    // вебхуки: TG с секрет-заголовком, MAX с секретом в URL;
-    // MAX снимает подписку после ~8 ч недоступности — переустановка при каждом старте
+    // приём апдейтов: polling (по умолчанию — без домена и входящих портов) или
+    // webhook (для масштаба; MAX снимает подписку после ~8 ч — переустановка при старте)
     for (name, adapter) in &state.adapters {
-        let url = state.cfg.webhook_url(name);
-        match adapter.set_webhook(&url).await {
-            Ok(()) => tracing::info!("вебхук {name} установлен"),
-            Err(e) => tracing::error!("вебхук {name}: {e}"),
+        match state.cfg.transport(name) {
+            Transport::Polling => {
+                tokio::spawn(polling::run(state.clone(), name.clone()));
+            }
+            Transport::Webhook => {
+                let url = state.cfg.webhook_url(name);
+                match adapter.set_webhook(&url).await {
+                    Ok(()) => tracing::info!("вебхук {name} установлен"),
+                    Err(e) => tracing::error!("вебхук {name}: {e}"),
+                }
+            }
         }
     }
 

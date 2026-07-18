@@ -60,12 +60,7 @@ fn snapshot_with(list: Vec<Booking>) -> UserSnapshot {
 fn first_cycle_молчит_но_пишет_снапшот_и_active() {
     let out = run_cycle(
         &UserSnapshot::default(),
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-17T12:00:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-17T12:00:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -83,12 +78,7 @@ fn отсутствие_ключа_в_снапшоте_тоже_молчалив
     // не first_cycle, но секции bookings в снапшоте ещё нет (например, старт после сбоя)
     let out = run_cycle(
         &UserSnapshot::default(),
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-17T12:00:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-17T12:00:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -106,12 +96,7 @@ fn новая_бронь_уведомление() {
     let prev = snapshot_with(vec![]);
     let out = run_cycle(
         &prev,
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-20T09:30:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-20T09:30:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -139,21 +124,11 @@ fn роль_проверяющего_и_онлайн() {
 
 #[test]
 fn перенос_с_было_и_сбросом_напоминаний() {
-    let mut prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-20T09:30:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let mut prev = snapshot_with(vec![booking("b1", "2026-07-20T09:30:00Z", "peer", "ivan")]);
     prev.reminded_bookings.insert("b1".into(), vec![30]);
     let out = run_cycle(
         &prev,
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-21T11:00:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-21T11:00:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -172,12 +147,7 @@ fn перенос_с_было_и_сбросом_напоминаний() {
 
 #[test]
 fn отмена_будущей_брони() {
-    let prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-20T09:30:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let prev = snapshot_with(vec![booking("b1", "2026-07-20T09:30:00Z", "peer", "ivan")]);
     let out = run_cycle(
         &prev,
         &fetched_bookings(vec![]),
@@ -198,12 +168,7 @@ fn отмена_будущей_брони() {
 
 #[test]
 fn исчезнувшая_прошедшая_бронь_молчит() {
-    let prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-17T09:00:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let prev = snapshot_with(vec![booking("b1", "2026-07-17T09:00:00Z", "peer", "ivan")]);
     let out = run_cycle(
         &prev,
         &fetched_bookings(vec![]),
@@ -221,20 +186,10 @@ fn исчезнувшая_прошедшая_бронь_молчит() {
 #[test]
 fn каскад_порогов_по_отдельности() {
     // проверка через 25 мин: порог 30 сработал, 15 и 3 — ещё нет
-    let prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-17T10:25:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let prev = snapshot_with(vec![booking("b1", "2026-07-17T10:25:00Z", "peer", "ivan")]);
     let out = run_cycle(
         &prev,
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-17T10:25:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-17T10:25:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -257,20 +212,10 @@ fn каскад_порогов_по_отдельности() {
 fn схлопывание_пропущенных_порогов_и_кнопка() {
     // бронь появилась в снапшоте, но напоминаний ещё не было; осталось 10 мин:
     // пороги 30 и 15 пересечены разом — одно сообщение, кнопка (минимальный порог 3 не пересечён)
-    let prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-17T10:10:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let prev = snapshot_with(vec![booking("b1", "2026-07-17T10:10:00Z", "peer", "ivan")]);
     let out = run_cycle(
         &prev,
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-17T10:10:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-17T10:10:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -287,21 +232,11 @@ fn схлопывание_пропущенных_порогов_и_кнопка(
 
 #[test]
 fn минимальный_порог_даёт_кнопку_и_предупреждение() {
-    let mut prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-17T10:02:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let mut prev = snapshot_with(vec![booking("b1", "2026-07-17T10:02:00Z", "peer", "ivan")]);
     prev.reminded_bookings.insert("b1".into(), vec![30, 15]);
     let out = run_cycle(
         &prev,
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-17T10:02:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-17T10:02:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -321,22 +256,12 @@ fn минимальный_порог_даёт_кнопку_и_предупреж
 
 #[test]
 fn кнопки_нет_если_уже_подтверждено_или_будильник_выключен() {
-    let mut prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-17T10:02:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let mut prev = snapshot_with(vec![booking("b1", "2026-07-17T10:02:00Z", "peer", "ivan")]);
     prev.reminded_bookings.insert("b1".into(), vec![30, 15]);
     let acked: HashSet<String> = ["b1".to_string()].into();
     let out = run_cycle(
         &prev,
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-17T10:02:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-17T10:02:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -348,21 +273,11 @@ fn кнопки_нет_если_уже_подтверждено_или_буди�
 
     let mut s = settings();
     s.notify_alarm = false;
-    let mut prev2 = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-17T10:02:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let mut prev2 = snapshot_with(vec![booking("b1", "2026-07-17T10:02:00Z", "peer", "ivan")]);
     prev2.reminded_bookings.insert("b1".into(), vec![30, 15]);
     let out2 = run_cycle(
         &prev2,
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-17T10:02:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-17T10:02:00Z", "peer", "ivan")]),
         &s,
         "ivan",
         now(),
@@ -374,20 +289,10 @@ fn кнопки_нет_если_уже_подтверждено_или_буди�
 
 #[test]
 fn прошедшая_бронь_без_напоминаний() {
-    let prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-17T09:59:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let prev = snapshot_with(vec![booking("b1", "2026-07-17T09:59:00Z", "peer", "ivan")]);
     let out = run_cycle(
         &prev,
-        &fetched_bookings(vec![booking(
-            "b1",
-            "2026-07-17T09:59:00Z",
-            "peer",
-            "ivan",
-        )]),
+        &fetched_bookings(vec![booking("b1", "2026-07-17T09:59:00Z", "peer", "ivan")]),
         &settings(),
         "ivan",
         now(),
@@ -405,12 +310,7 @@ fn тумблеры_гасят_свои_события() {
         notify_reminders: false,
         ..settings()
     };
-    let prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-20T09:30:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let prev = snapshot_with(vec![booking("b1", "2026-07-20T09:30:00Z", "peer", "ivan")]);
     let out = run_cycle(
         &prev,
         &fetched_bookings(vec![
@@ -694,12 +594,7 @@ fn alarm_message_текст() {
 
 #[test]
 fn снапшот_сериализуется_в_формат_state_json() {
-    let prev = snapshot_with(vec![booking(
-        "b1",
-        "2026-07-20T09:30:00Z",
-        "peer",
-        "ivan",
-    )]);
+    let prev = snapshot_with(vec![booking("b1", "2026-07-20T09:30:00Z", "peer", "ivan")]);
     let json = serde_json::to_value(&prev).unwrap();
     assert_eq!(json["bookings"]["b1"]["start"], "2026-07-20T09:30:00Z");
     assert_eq!(json["bookings"]["b1"]["verifier"], "peer");

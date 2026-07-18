@@ -12,6 +12,24 @@ fn var_num<T: std::str::FromStr>(name: &str, default: T) -> T {
     var(name).and_then(|v| v.parse().ok()).unwrap_or(default)
 }
 
+/// Как бот получает апдейты. По умолчанию polling — работает без домена и
+/// входящих портов (важно для РФ и локального запуска).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Transport {
+    Polling,
+    Webhook,
+}
+
+impl Transport {
+    fn parse(s: &str) -> Self {
+        if s.eq_ignore_ascii_case("webhook") {
+            Self::Webhook
+        } else {
+            Self::Polling
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub bind_addr: String,
@@ -23,8 +41,10 @@ pub struct AppConfig {
     pub enabled_messengers: Vec<String>,
     pub tg_bot_token: Option<String>,
     pub tg_webhook_secret: String,
+    pub tg_transport: Transport,
     pub max_bot_token: Option<String>,
     pub max_webhook_secret: String,
+    pub max_transport: Transport,
     pub max_api_url: String,
     pub max_html: bool,
     pub poll_interval_sec: u64,
@@ -42,7 +62,9 @@ impl AppConfig {
             bind_addr: var_or("BIND_ADDR", "0.0.0.0:80"),
             public_url: var("PUBLIC_URL")
                 .ok_or_else(|| {
-                    anyhow::anyhow!("PUBLIC_URL не задан (публичный https-URL сервиса для вебхуков)")
+                    anyhow::anyhow!(
+                        "PUBLIC_URL не задан (публичный https-URL сервиса — кнопка miniapp и вебхуки)"
+                    )
                 })?
                 .trim_end_matches('/')
                 .to_string(),
@@ -58,8 +80,10 @@ impl AppConfig {
                 .collect(),
             tg_bot_token: var("TG_BOT_TOKEN"),
             tg_webhook_secret: var_or("TG_WEBHOOK_SECRET", ""),
+            tg_transport: Transport::parse(&var_or("TG_TRANSPORT", "polling")),
             max_bot_token: var("MAX_BOT_TOKEN"),
             max_webhook_secret: var_or("MAX_WEBHOOK_SECRET", ""),
+            max_transport: Transport::parse(&var_or("MAX_TRANSPORT", "polling")),
             max_api_url: var_or("MAX_API_URL", s21_adapters::MAX_DEFAULT_BASE),
             max_html: var_or("MAX_HTML", "1") == "1",
             poll_interval_sec: var_num("POLL_INTERVAL_SEC", 90),
@@ -70,6 +94,13 @@ impl AppConfig {
             dev_fake_auth: var_or("DEV_FAKE_AUTH", "0") == "1",
         };
         Ok(cfg)
+    }
+
+    pub fn transport(&self, messenger: &str) -> Transport {
+        match messenger {
+            "max" => self.max_transport,
+            _ => self.tg_transport,
+        }
     }
 
     pub fn webhook_url(&self, messenger: &str) -> String {

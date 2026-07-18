@@ -269,9 +269,13 @@ fn other<E: std::fmt::Display>(e: E) -> PlatformError {
 pub async fn housekeeping(state: Arc<AppState>) {
     loop {
         tokio::time::sleep(Duration::from_secs(3600)).await;
-        if let Some(max) = state.adapter("max") {
-            if let Err(e) = max.set_webhook(&state.cfg.webhook_url("max")).await {
-                tracing::warn!("housekeeping: вебхук MAX: {e}");
+        // перестановка вебхука нужна только в webhook-режиме (MAX снимает подписку
+        // после ~8 ч недоступности); в polling-режиме вебхука нет
+        if state.cfg.transport("max") == crate::config::Transport::Webhook {
+            if let Some(max) = state.adapter("max") {
+                if let Err(e) = max.set_webhook(&state.cfg.webhook_url("max")).await {
+                    tracing::warn!("housekeeping: вебхук MAX: {e}");
+                }
             }
         }
         match db::cleanup_deliveries(&state.pool).await {
