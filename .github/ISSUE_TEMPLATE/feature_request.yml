@@ -1,0 +1,34 @@
+name: ✨ Идея или фича
+description: Предложить улучшение или новую возможность
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за идею! Опиши, что хочется — это попадёт в дорожную карту.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Что хочется и зачем
+      description: Опиши задачу с точки зрения пользователя (какую боль решает).
+      placeholder: Хочу видеть @-ник пира по проверке, чтобы быстро написать ему.
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: Как это могло бы работать
+      description: По желанию — набросок реализации, примеры, ссылки.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Область
+      options:
+        - Telegram
+        - MAX
+        - Miniapp (регистрация/настройки)
+        - Платформа Школы 21 (события, дедлайны, лента)
+        - Интеграции (Rocket.Chat и пр.)
+        - Прочее
+    validations:
+      required: true

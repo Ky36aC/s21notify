@@ -1,0 +1,60 @@
+name: 🐛 Баг
+description: Что-то работает не так
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за репорт! Заполни поля ниже — так баг починится быстрее.
+        Токены ботов, пароли и личные данные **не вставляй**.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Что произошло
+      description: Опиши проблему и шаги, чтобы её повторить.
+      placeholder: |
+        1. Нажал «...»
+        2. Пришло уведомление «...»
+        3. Кнопка «...» не появилась
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Что ожидалось
+      placeholder: Должна была появиться кнопка «✅ Я за компом».
+    validations:
+      required: true
+  - type: dropdown
+    id: messenger
+    attributes:
+      label: Где проявляется
+      options:
+        - Telegram
+        - MAX
+        - Оба мессенджера
+        - Miniapp (настройки)
+        - Не знаю
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Режим запуска
+      options:
+        - Общий бот (сервер)
+        - Локальный (свой .exe, APP_MODE=local)
+        - Не знаю
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия
+      description: Номер релиза или поле version из /healthz (если знаешь).
+      placeholder: "3.0.0"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Логи / скриншоты
+      description: По желанию. Логи без токенов и личных данных.
