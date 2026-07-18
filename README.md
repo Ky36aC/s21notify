@@ -64,25 +64,28 @@ cargo install trunk
 
 ## Деплой
 
-LXC `s21notify.lan` (Debian, 512 МБ), systemd-сервис `s21notify`, каталог
-`/opt/s21notify`. Компиляция — только в CI, на сервер едет готовый артефакт.
+Сервис — один статический бинарь + `static/` под systemd; ставится в
+`/opt/s21notify`. Компиляция — только в CI, на сервер едет готовый артефакт
+(на слабой машине вроде 512 МБ LXC компилировать нельзя).
 
 ```sh
+export DEPLOY_HOST=root@адрес-твоего-сервера   # можно и DEPLOY_DIR (дефолт /opt/s21notify)
 ./deploy/deploy.sh              # берёт последний успешный build ветки main
 ./deploy/deploy.sh <run_id>     # конкретный запуск CI
 ```
 
 Скрипт качает артефакт (`gh run download`), кладёт бинарь + `static/` + юнит на
-LXC, рестартит сервис и проверяет `/healthz`. Первый деплой попросит заполнить
-`.env` из `deploy/env.example` (сгенерировать секреты: `openssl rand -base64 32`).
+сервер, рестартит сервис и проверяет `/healthz`. Первый деплой попросит заполнить
+`.env` из `deploy/env.example` (там расписано, откуда какие значения брать).
 
-Проброс `https://s21notify.tobitrix.ru` → `http://10.0.0.128:80` настроен на
-роутере. Вебхуки ставятся автоматически при старте; MAX-подписку housekeeping
-переустанавливает ежечасно (MAX снимает её после ~8 ч недоступности).
+Публичный https-домен нужно направить на сервис самому (обратный прокси или
+проброс порта) и указать его в `PUBLIC_URL`. Вебхуки ставятся автоматически при
+старте; MAX-подписку housekeeping переустанавливает ежечасно (MAX снимает её
+после ~8 ч недоступности).
 
 ## Настройка ботов (делается один раз руками)
 
-- **Telegram** `@s21notify_bot`: у [@BotFather](https://t.me/BotFather) задать
-  токен → `.env` `TG_BOT_TOKEN`; кнопку miniapp сервис шлёт сам (тип `web_app`).
-- **MAX** `s21notify` (кабинет dev.max.ru): токен → `.env` `MAX_BOT_TOKEN`;
-  URL miniapp прописать в кабинете.
+- **Telegram**: у [@BotFather](https://t.me/BotFather) создать бота, токен → `.env`
+  `TG_BOT_TOKEN`; кнопку miniapp сервис шлёт сам (тип `web_app`).
+- **MAX**: в кабинете [dev.max.ru](https://dev.max.ru) создать бота, токен → `.env`
+  `MAX_BOT_TOKEN`; URL miniapp прописать в кабинете.

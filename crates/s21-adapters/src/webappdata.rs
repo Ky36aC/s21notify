@@ -116,7 +116,7 @@ mod tests {
 
     /// Собирает валидный init_data, подписывая его так же, как это делает мессенджер.
     fn make_init_data(auth_date: i64) -> String {
-        let user = r#"{"id":456,"first_name":"Флор","username":"floriato"}"#;
+        let user = r#"{"id":456,"first_name":"Иван","username":"ivan"}"#;
         let user_enc: String = form_urlencoded::byte_serialize(user.as_bytes()).collect::<String>();
         let dcs = format!("auth_date={auth_date}\nuser={user}");
         let hash = sign(&dcs, TOKEN);
@@ -128,15 +128,15 @@ mod tests {
         let now = 1_800_000_000;
         let u = verify(&make_init_data(now - 100), TOKEN, 300, now).unwrap();
         assert_eq!(u.ext_user_id, "456");
-        assert_eq!(u.username.as_deref(), Some("floriato"));
-        assert_eq!(u.full_name.as_deref(), Some("Флор"));
+        assert_eq!(u.username.as_deref(), Some("ivan"));
+        assert_eq!(u.full_name.as_deref(), Some("Иван"));
     }
 
     #[test]
     fn порченая_подпись_и_чужой_токен_отклоняются() {
         let now = 1_800_000_000;
         let good = make_init_data(now);
-        let tampered = good.replace("floriato", "hacker");
+        let tampered = good.replace("ivan", "hacker");
         assert!(verify(&tampered, TOKEN, 300, now).is_none());
         assert!(verify(&good, "другой:токен", 300, now).is_none());
         assert!(verify("", TOKEN, 300, now).is_none());

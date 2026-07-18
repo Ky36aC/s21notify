@@ -130,7 +130,7 @@ async fn вебхук_и_ответ_на_callback() {
         .await;
 
     let a = adapter(&server).await;
-    a.set_webhook("https://s21notify.tobitrix.ru/webhook/max?s=secret")
+    a.set_webhook("https://example.com/webhook/max?s=secret")
         .await
         .unwrap();
 
@@ -151,7 +151,7 @@ async fn вебхук_и_ответ_на_callback() {
     let body: Value = serde_json::from_slice(&sub.body).unwrap();
     assert_eq!(
         body["url"],
-        "https://s21notify.tobitrix.ru/webhook/max?s=secret"
+        "https://example.com/webhook/max?s=secret"
     );
     let ans = reqs.iter().find(|r| r.url.path() == "/answers").unwrap();
     let body: Value = serde_json::from_slice(&ans.body).unwrap();

@@ -4,8 +4,10 @@
 #   без аргумента — последний успешный run workflow build на ветке main
 set -euo pipefail
 
-HOST=root@s21notify.lan
-DIR=/opt/s21notify
+# хост и каталог задаются окружением, чтобы не хардкодить чужую инфраструктуру:
+#   export DEPLOY_HOST=root@адрес-твоего-сервера
+HOST="${DEPLOY_HOST:?Задай DEPLOY_HOST, напр.: export DEPLOY_HOST=root@my-server}"
+DIR="${DEPLOY_DIR:-/opt/s21notify}"
 ARTIFACT=s21notify
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

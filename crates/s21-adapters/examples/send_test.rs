@@ -1,8 +1,8 @@
 //! Живая проверка отправки себе в Telegram и MAX (фаза 5).
 //!
 //! Нужны переменные окружения (локально или в .env, который НЕ коммитится):
-//!   TG_BOT_TOKEN, TG_TEST_CHAT_ID — свой chat_id у @s21notify_bot
-//!   MAX_BOT_TOKEN, MAX_TEST_CHAT_ID — свой chat_id у MAX-бота
+//!   TG_BOT_TOKEN, TG_TEST_CHAT_ID — свой chat_id у своего Telegram-бота
+//!   MAX_BOT_TOKEN, MAX_TEST_CHAT_ID — свой chat_id у своего MAX-бота
 //!   MAX_API_URL (опционально, дефолт platform-api2.max.ru)
 //!
 //! Запуск: cargo run -p s21-adapters --example send_test

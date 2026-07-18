@@ -144,7 +144,7 @@ fn booking_json(id: &str, start: &str) -> Value {
         "eventSlot": {"start": start},
         "task": {"goalName": "P02D01"},
         "verifierUser": {"login": "peer"},
-        "verifiableStudent": {"user": {"login": "floriato"}},
+        "verifiableStudent": {"user": {"login": "ivan"}},
         "isOnline": false,
         "bookingStatus": "OPEN"
     })
@@ -196,7 +196,7 @@ async fn build_stand(platform: &Platform) -> Stand {
     let state = AppState::build_with_adapters(cfg, pool, tx.clone(), Some(adapters)).unwrap();
 
     let enc = state.cipher.encrypt("offline-token");
-    let uid = db::create_user(&state.pool, "floriato", &enc)
+    let uid = db::create_user(&state.pool, "ivan", &enc)
         .await
         .unwrap();
     db::attach_user(&state.pool, uid, "telegram", "111", "111", None)

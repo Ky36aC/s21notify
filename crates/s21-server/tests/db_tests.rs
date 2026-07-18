@@ -10,18 +10,18 @@ async fn pool() -> sqlx::SqlitePool {
 #[tokio::test]
 async fn создание_пользователя_с_настройками_и_снапшотом() {
     let p = pool().await;
-    let id = db::create_user(&p, "floriato", b"enc").await.unwrap();
+    let id = db::create_user(&p, "ivan", b"enc").await.unwrap();
 
-    let u = db::user_by_login(&p, "floriato").await.unwrap().unwrap();
+    let u = db::user_by_login(&p, "ivan").await.unwrap().unwrap();
     assert_eq!(u.id, id);
     assert_eq!(u.token_status, "ok");
     assert_eq!(u.offline_token_enc.as_deref(), Some(b"enc".as_ref()));
     assert!(!u.first_cycle_done);
 
     // логин уникален без учёта регистра
-    let same = db::user_by_login(&p, "FLORIATO").await.unwrap();
+    let same = db::user_by_login(&p, "IVAN").await.unwrap();
     assert!(same.is_some());
-    assert!(db::create_user(&p, "Floriato", b"x").await.is_err());
+    assert!(db::create_user(&p, "Ivan", b"x").await.is_err());
 
     // дефолтные настройки v2.1
     let s = db::get_settings(&p, id).await.unwrap();
@@ -36,10 +36,10 @@ async fn создание_пользователя_с_настройками_и_
 #[tokio::test]
 async fn привязки_и_каскадное_удаление() {
     let p = pool().await;
-    let id = db::create_user(&p, "floriato", b"enc").await.unwrap();
+    let id = db::create_user(&p, "ivan", b"enc").await.unwrap();
 
     // /start до регистрации: чат запомнен, user_id пуст
-    db::remember_chat(&p, "telegram", "111", "111", Some("floriato_tg"))
+    db::remember_chat(&p, "telegram", "111", "111", Some("ivan_tg"))
         .await
         .unwrap();
     let acc = db::account_by_ext(&p, "telegram", "111")
@@ -50,7 +50,7 @@ async fn привязки_и_каскадное_удаление() {
     assert_eq!(db::active_accounts(&p, id).await.unwrap().len(), 0);
 
     // регистрация в miniapp цепляет чат к пользователю (chat_id из /start сохранён)
-    db::attach_user(&p, id, "telegram", "111", "fallback", Some("floriato_tg"))
+    db::attach_user(&p, id, "telegram", "111", "fallback", Some("ivan_tg"))
         .await
         .unwrap();
     let acc = db::account_by_ext(&p, "telegram", "111")
@@ -126,7 +126,7 @@ fn ab(bid: &str, start: &str) -> ActiveBooking {
             start: start.into(),
             task: "P1".into(),
             verifier: "peer".into(),
-            verifiable: "floriato".into(),
+            verifiable: "ivan".into(),
             online: false,
             status: "OPEN".into(),
         },
@@ -136,7 +136,7 @@ fn ab(bid: &str, start: &str) -> ActiveBooking {
 #[tokio::test]
 async fn commit_cycle_сохраняет_acked_по_живым_броням() {
     let p = pool().await;
-    let id = db::create_user(&p, "floriato", b"enc").await.unwrap();
+    let id = db::create_user(&p, "ivan", b"enc").await.unwrap();
     let snap = s21_core::UserSnapshot::default();
 
     db::commit_cycle(&p, id, &snap, &[ab("b1", "T1"), ab("b2", "T2")])
@@ -169,7 +169,7 @@ async fn commit_cycle_сохраняет_acked_по_живым_броням() {
 #[tokio::test]
 async fn alarm_candidates_учитывает_настройки() {
     let p = pool().await;
-    let id = db::create_user(&p, "floriato", b"enc").await.unwrap();
+    let id = db::create_user(&p, "ivan", b"enc").await.unwrap();
     db::commit_cycle(&p, id, &Default::default(), &[ab("b1", "T1")])
         .await
         .unwrap();
@@ -194,7 +194,7 @@ async fn alarm_candidates_учитывает_настройки() {
 #[tokio::test]
 async fn снапшот_сохраняется_и_читается() {
     let p = pool().await;
-    let id = db::create_user(&p, "floriato", b"enc").await.unwrap();
+    let id = db::create_user(&p, "ivan", b"enc").await.unwrap();
     let mut snap = s21_core::UserSnapshot::default();
     snap.seen_notifications = Some(vec!["n1".into()]);
     db::commit_cycle(&p, id, &snap, &[]).await.unwrap();
@@ -205,7 +205,7 @@ async fn снапшот_сохраняется_и_читается() {
 #[tokio::test]
 async fn deliveries_журнал_и_чистка() {
     let p = pool().await;
-    let id = db::create_user(&p, "floriato", b"enc").await.unwrap();
+    let id = db::create_user(&p, "ivan", b"enc").await.unwrap();
     db::log_delivery(
         &p,
         Some(id),

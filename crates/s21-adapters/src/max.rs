@@ -354,14 +354,14 @@ mod tests {
     #[test]
     fn вернувшийся_шлёт_start_текстом() {
         let raw = json!({"update_type":"message_created","message":{
-            "sender":{"user_id":456,"username":"floriato"},
+            "sender":{"user_id":456,"username":"ivan"},
             "recipient":{"chat_id":111,"chat_type":"dialog"},
             "body":{"mid":"mid.001","seq":1,"text":"/start"}}});
         let u = parse_max_update(&raw).unwrap();
         assert_eq!(u.kind, UpdateKind::Started);
         assert_eq!(u.ext_user_id, "456");
         assert_eq!(u.chat_id, "111");
-        assert_eq!(u.username.as_deref(), Some("floriato"));
+        assert_eq!(u.username.as_deref(), Some("ivan"));
     }
 
     #[test]

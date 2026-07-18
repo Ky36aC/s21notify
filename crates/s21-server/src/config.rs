@@ -40,7 +40,10 @@ impl AppConfig {
     pub fn from_env() -> anyhow::Result<Self> {
         let cfg = Self {
             bind_addr: var_or("BIND_ADDR", "0.0.0.0:80"),
-            public_url: var_or("PUBLIC_URL", "https://s21notify.tobitrix.ru")
+            public_url: var("PUBLIC_URL")
+                .ok_or_else(|| {
+                    anyhow::anyhow!("PUBLIC_URL не задан (публичный https-URL сервиса для вебхуков)")
+                })?
                 .trim_end_matches('/')
                 .to_string(),
             static_dir: var_or("STATIC_DIR", "static"),

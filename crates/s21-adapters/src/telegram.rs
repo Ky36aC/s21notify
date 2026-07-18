@@ -300,12 +300,12 @@ mod tests {
     #[test]
     fn старт_команда_и_болтовня() {
         let start = json!({"update_id":1,"message":{"message_id":10,
-            "from":{"id":456,"username":"floriato"},"chat":{"id":456},"text":"/start"}});
+            "from":{"id":456,"username":"ivan"},"chat":{"id":456},"text":"/start"}});
         let u = parse_telegram_update(&start).unwrap();
         assert_eq!(u.kind, UpdateKind::Started);
         assert_eq!(u.ext_user_id, "456");
         assert_eq!(u.chat_id, "456");
-        assert_eq!(u.username.as_deref(), Some("floriato"));
+        assert_eq!(u.username.as_deref(), Some("ivan"));
 
         let cmd = json!({"message":{"from":{"id":456},"chat":{"id":456},"text":"/reviews"}});
         assert_eq!(parse_telegram_update(&cmd).unwrap().kind, UpdateKind::Text);
@@ -320,7 +320,7 @@ mod tests {
     #[test]
     fn callback_с_id_сообщения() {
         let cb = json!({"callback_query":{"id":"cb42","data":"ack:b1",
-            "from":{"id":456,"username":"floriato"},
+            "from":{"id":456,"username":"ivan"},
             "message":{"message_id":77,"chat":{"id":456}}}});
         let u = parse_telegram_update(&cb).unwrap();
         assert_eq!(u.kind, UpdateKind::Callback);
