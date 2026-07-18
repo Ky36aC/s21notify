@@ -24,10 +24,6 @@ jobs:
   build-linux:
     needs: test
     runs-on: ubuntu-latest
-    env:
-      # vendored openssl (native-tls для Telegram) кросс-собираем под musl
-      CC_x86_64_unknown_linux_musl: musl-gcc
-      AR_x86_64_unknown_linux_musl: ar
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2

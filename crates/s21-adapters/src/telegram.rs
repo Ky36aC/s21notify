@@ -27,8 +27,16 @@ pub struct TelegramAdapter {
 
 impl TelegramAdapter {
     pub fn new(bot_token: &str, webhook_secret: &str) -> Self {
+        // long polling держит getUpdates до 25 с (polling::run), а дефолтный клиент
+        // teloxide рвёт ЛЮБОЙ запрос на 17 с (default_reqwest_settings) → long-poll
+        // стабильно падает «error sending request». Строим Bot со своим клиентом,
+        // у которого общий timeout заведомо больше окна long polling.
+        let client = teloxide_core::net::default_reqwest_settings()
+            .timeout(std::time::Duration::from_secs(60))
+            .build()
+            .expect("не удалось создать HTTP-клиент Telegram");
         Self {
-            bot: Bot::new(bot_token),
+            bot: Bot::with_client(bot_token, client),
             bot_token: bot_token.to_string(),
             webhook_secret: webhook_secret.to_string(),
         }
