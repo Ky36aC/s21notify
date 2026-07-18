@@ -67,11 +67,11 @@ cargo install trunk
 Если не хочешь пользоваться общим ботом — запусти свой экземпляр у себя. Домен
 не нужен: апдейты идут long polling'ом, настройки открываются в браузере.
 
-1. Скачай `s21notify.exe` (артефакт `s21notify-windows` из CI) — miniapp уже
-   встроена, ничего ставить не нужно.
-2. Положи рядом файл `.env` (шаблон — `deploy/local.env.example`): в нём
-   `APP_MODE=local` и `TG_BOT_TOKEN=` — впиши туда токен своего бота от
-   [@BotFather](https://t.me/BotFather).
+1. Скачай **[`s21notify-windows.zip` из последнего релиза](https://github.com/Ky36aC/s21notify/releases/latest)**
+   и распакуй. Внутри — `s21notify.exe` (miniapp уже встроена, ничего ставить не
+   нужно) и рядом готовый `.env`.
+2. Открой `.env` блокнотом и впиши в `TG_BOT_TOKEN=` токен своего бота от
+   [@BotFather](https://t.me/BotFather). Сохрани.
 3. Запусти `s21notify.exe`. `ENCRYPTION_KEY`/`JWT_SECRET` сгенерируются сами.
 4. Открой своего бота в Telegram, нажми **/start**.
 5. Открой `http://127.0.0.1:8080`, введи логин/пароль Школы 21 — готово,
@@ -79,6 +79,20 @@ cargo install trunk
 
 Пароль Школы 21 вводится один раз и не сохраняется (хранится только шифрованный
 offline-токен, ключ — в локальном `.env`). Всё работает офлайн-приватно на твоём ПК.
+
+## Релизы
+
+Готовые сборки лежат в [релизах](https://github.com/Ky36aC/s21notify/releases).
+Выпуск — пуш тега `vX.Y.Z` (workflow `.github/workflows/release.yml` соберёт обе
+платформы и приложит архивы):
+
+```sh
+git tag v3.0.0 && git push origin v3.0.0
+```
+
+- `s21notify-windows.zip` — папка с `s21notify.exe` и готовым `.env` (для учеников,
+  локальный режим);
+- `s21notify-linux.tar.gz` — `s21-server` + `static/` + юнит + `env.example` (сервер).
 
 ## Деплой
 

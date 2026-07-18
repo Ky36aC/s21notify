@@ -92,3 +92,4 @@ jobs:
           name: s21notify-windows
           path: out/
           if-no-files-found: error
+          include-hidden-files: true # иначе upload-artifact@v4 выбросит .env (dotfile)

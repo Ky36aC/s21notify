@@ -1,0 +1,84 @@
+name: release
+
+# Публикация релиза с готовыми архивами. Запускается по тегу vX.Y.Z:
+#   git tag v3.0.0 && git push origin v3.0.0
+# Тег снимается с уже протестированного main, поэтому тесты тут не гоняем повторно.
+# Итог — GitHub Release со сборками:
+#   s21notify-windows.zip   — папка s21notify\ с s21notify.exe и готовым .env (локальный режим)
+#   s21notify-linux.tar.gz  — s21-server + static/ + юнит + env.example (для сервера)
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # нужно для создания релиза и заливки ассетов
+
+jobs:
+  # Windows: самодостаточный .exe + .env рядом — ученику остаётся вписать токен.
+  windows:
+    runs-on: windows-latest
+    env:
+      RUSTFLAGS: "-C target-feature=+crt-static" # статический CRT, без vcruntime-DLL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: windows
+      - name: wasm-таргет и trunk
+        shell: pwsh
+        run: |
+          rustup target add wasm32-unknown-unknown
+          Invoke-WebRequest -Uri "https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-pc-windows-msvc.zip" -OutFile trunk.zip
+          Expand-Archive -Path trunk.zip -DestinationPath "$env:USERPROFILE\.cargo\bin" -Force
+      # miniapp собираем ДО сервера: rust-embed встроит dist в .exe
+      - name: Miniapp (trunk/wasm)
+        shell: pwsh
+        working-directory: miniapp
+        run: trunk build --release
+      - name: Самодостаточный .exe
+        run: cargo build --release -p s21-server
+      - name: Собрать архив
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path s21notify | Out-Null
+          Copy-Item target\release\s21-server.exe s21notify\s21notify.exe
+          # готовый .env локального режима — с инструкцией в комментариях внутри
+          Copy-Item deploy\local.env.example s21notify\.env
+          # архивируем папку целиком: так .env (dotfile) попадает в архив надёжно
+          Compress-Archive -Path s21notify -DestinationPath s21notify-windows.zip -Force
+      - name: Залить в релиз
+        uses: softprops/action-gh-release@v2
+        with:
+          files: s21notify-windows.zip
+
+  # Linux: статический musl-бинарь сервера + static/ + юнит для деплоя.
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: musl-wasm
+      - name: Тулчейн под musl и wasm
+        run: |
+          rustup target add x86_64-unknown-linux-musl wasm32-unknown-unknown
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          curl -fsSL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xzf - -C "$HOME/.cargo/bin"
+      - name: Miniapp (trunk/wasm)
+        run: trunk build --release
+        working-directory: miniapp
+      - name: Статический бинарь сервера (musl)
+        run: cargo build --release --target x86_64-unknown-linux-musl -p s21-server
+      - name: Собрать архив
+        run: |
+          mkdir -p s21notify/static
+          cp target/x86_64-unknown-linux-musl/release/s21-server s21notify/
+          cp -r miniapp/dist/* s21notify/static/
+          cp deploy/s21notify.service deploy/env.example s21notify/
+          tar czf s21notify-linux.tar.gz s21notify
+      - name: Залить в релиз
+        uses: softprops/action-gh-release@v2
+        with:
+          files: s21notify-linux.tar.gz
