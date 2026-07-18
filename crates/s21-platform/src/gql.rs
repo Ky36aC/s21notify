@@ -25,8 +25,9 @@ impl GqlClient {
     pub fn new(urls: PlatformUrls) -> Result<Self> {
         Ok(Self {
             urls,
-            // таймаут на каждый запрос свой (дедлайны — 90 с), у клиента общего нет
-            http: reqwest::Client::builder().build()?,
+            // таймаут на каждый запрос свой (дедлайны — 90 с), у клиента общего нет;
+            // rustls явно (openssl стал дефолтом reqwest из-за Telegram-клиента)
+            http: reqwest::Client::builder().use_rustls_tls().build()?,
         })
     }
 

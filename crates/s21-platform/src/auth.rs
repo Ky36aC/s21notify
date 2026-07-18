@@ -60,6 +60,7 @@ impl AuthClient {
         let login = login.split('@').next().unwrap_or(login).trim();
 
         let http = reqwest::Client::builder()
+            .use_rustls_tls() // openssl-дефолт включён из-за Telegram — платформу держим на rustls
             .cookie_store(true)
             .redirect(reqwest::redirect::Policy::none())
             .timeout(Duration::from_secs(30))
@@ -144,6 +145,7 @@ impl AuthClient {
     /// Access-токен по офлайн-токену, без пароля. `invalid_grant` = токен отозван.
     pub async fn refresh(&self, offline_token: &str) -> Result<TokenSet> {
         let http = reqwest::Client::builder()
+            .use_rustls_tls() // см. login_password: держим платформу на rustls
             .timeout(Duration::from_secs(30))
             .build()?;
         self.token_request(

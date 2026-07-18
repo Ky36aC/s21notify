@@ -14,7 +14,10 @@ tokio = { workspace = true }
 reqwest = { workspace = true }
 tracing = { workspace = true }
 async-trait = "0.1"
-teloxide-core = { version = "0.13", default-features = false, features = ["rustls"] }
+# Telegram-клиент — на native-tls (openssl): в РФ TSPU режет rustls-хендшейк к
+# api.telegram.org, а openssl-фингерпринт проходит (проверено на проде). MAX и
+# платформа остаются на rustls (пинятся .use_rustls_tls() в своих клиентах).
+teloxide-core = { version = "0.13", default-features = false, features = ["native-tls"] }
 hmac = "0.12"
 sha2 = "0.10"
 subtle = "2"
@@ -22,6 +25,11 @@ hex = "0.4"
 form_urlencoded = "1"
 percent-encoding = "2"
 anyhow = "1"
+
+# native-tls на Linux = openssl; для статического musl-бинаря собираем openssl из
+# исходников (vendored). Windows использует schannel — openssl там не нужен.
+[target.'cfg(target_os = "linux")'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]
 wiremock = "0.6"

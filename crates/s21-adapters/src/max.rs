@@ -34,6 +34,9 @@ impl MaxAdapter {
         let ca =
             reqwest::Certificate::from_pem(include_bytes!("../certs/russian_trusted_root_ca.pem"))?;
         let http = reqwest::Client::builder()
+            // фича native-tls (для Telegram) делает openssl дефолтом reqwest —
+            // MAX явно оставляем на rustls, как и было
+            .use_rustls_tls()
             .add_root_certificate(ca)
             .timeout(std::time::Duration::from_secs(15))
             .build()?;
