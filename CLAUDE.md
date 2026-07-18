@@ -107,6 +107,14 @@ ssh "$DEPLOY_HOST" "journalctl -u s21notify -n 50 --no-pager"
 - **Лента**: типы `CALENDAR` и `DASHBOARD` дублируют сообщения watcher'а и фильтруются;
   `PROJECT` («выставлена оценка») — уникален, проходит.
 
+## Ветки и релизы
+
+Trunk-based: работаем в `main` + короткие фича-ветки → PR. Тест перед merge —
+локальный режим (`APP_MODE=local`), отдельного staging нет. Релиз — пуш тега
+`vX.Y.Z` (`.github/workflows/release.yml` собирает архивы Windows/Linux и
+публикует GitHub Release; версия воркспейса = версия тега без `-dev`). Задачи и
+роадмап — GitHub Issues + Projects (`scripts/setup-github-project.sh`).
+
 ## Секреты
 
 Репозиторий публичный. `.env`, `*.db`, PEM с приватными данными и токены — вне git
